@@ -76,3 +76,32 @@ export const getPendingApprovals = async () => {
   }
 };
 
+export const approveApprovalItem = async (item) => {
+  const type = (item.type || '').toLowerCase();
+  if (type === 'timesheet') {
+    const res = await apiClient.post(`/timesheets/${item.originalId}/approve`);
+    return extractData(res);
+  } else if (type === 'invoice') {
+    const res = await apiClient.post(`/invoices/${item.originalId}/approve`);
+    return extractData(res);
+  } else {
+    const res = await apiClient.post(`/approvals/${item.id || item.originalId}/approve`);
+    return extractData(res);
+  }
+};
+
+export const rejectApprovalItem = async (item, reason) => {
+  const type = (item.type || '').toLowerCase();
+  if (type === 'timesheet') {
+    const res = await apiClient.post(`/timesheets/${item.originalId}/reject`, { reason });
+    return extractData(res);
+  } else if (type === 'invoice') {
+    const res = await apiClient.post(`/invoices/${item.originalId}/reject`, { reason });
+    return extractData(res);
+  } else {
+    const res = await apiClient.post(`/approvals/${item.id || item.originalId}/reject`, { reason });
+    return extractData(res);
+  }
+};
+
+

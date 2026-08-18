@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Search, LogOut, User, Moon, Sun } from 'lucide-react';
+import { Search, LogOut, User, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -30,13 +30,9 @@ export const Navbar = ({ toggleDarkMode, isDarkMode }) => {
         <button
           onClick={toggleDarkMode}
           className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors"
+          title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         >
           {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-        </button>
-
-        <button className="relative rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-900" />
         </button>
         
         <div className="h-8 w-px bg-slate-200 dark:bg-slate-700" />
