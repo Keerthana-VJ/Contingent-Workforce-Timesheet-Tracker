@@ -18,8 +18,11 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ContractorRequest {
-    @NotNull(message = "User ID is required")
     private UUID userId;
+
+    private String name;
+    private String email;
+    private String phone;
 
     @NotNull(message = "Vendor ID is required")
     private UUID vendorId;

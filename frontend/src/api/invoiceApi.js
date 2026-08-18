@@ -25,3 +25,19 @@ export const submitInvoice = async (id) => {
   return extractData(response);
 };
 
+export const approveInvoice = async (id) => {
+  const response = await apiClient.post(`/invoices/${id}/approve`);
+  return extractData(response);
+};
+
+export const rejectInvoice = async (id, reason) => {
+  const response = await apiClient.post(`/invoices/${id}/reject`, { reason });
+  return extractData(response);
+};
+
+export const markPaidInvoice = async (id) => {
+  const response = await apiClient.post(`/invoices/${id}/mark-paid`);
+  return extractData(response);
+};
+
+

@@ -132,10 +132,6 @@ export const Login = () => {
             />
             <span className="ml-2 text-xs">Remember me</span>
           </label>
-
-          <span className="text-xs text-slate-500 dark:text-slate-400">
-            Password: <code className="rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 font-mono text-[11px] text-slate-700 dark:text-slate-300">Password123!</code>
-          </span>
         </div>
 
         <Button type="submit" className="w-full py-2.5 font-medium shadow-md shadow-primary-500/20" isLoading={isLoading}>

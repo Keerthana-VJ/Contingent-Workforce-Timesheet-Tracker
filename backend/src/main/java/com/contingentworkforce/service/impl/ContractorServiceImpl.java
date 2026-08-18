@@ -26,6 +26,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.contingentworkforce.enums.Role;
+import com.contingentworkforce.enums.UserStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 @Service
 @RequiredArgsConstructor
 public class ContractorServiceImpl implements ContractorService {
@@ -34,15 +38,37 @@ public class ContractorServiceImpl implements ContractorService {
     private final UserRepository userRepository;
     private final VendorRepository vendorRepository;
     private final VendorServiceImpl vendorService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
     public ContractorResponse createContractor(ContractorRequest request) {
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + request.getUserId()));
+        User user;
+        if (request.getUserId() != null) {
+            user = userRepository.findById(request.getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + request.getUserId()));
+        } else if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+            String email = request.getEmail().trim().toLowerCase();
+            user = userRepository.findByEmail(email).orElseGet(() -> {
+                String userName = request.getName() != null && !request.getName().trim().isEmpty()
+                        ? request.getName().trim()
+                        : "Contractor User";
+                User newUser = User.builder()
+                        .name(userName)
+                        .email(email)
+                        .phone(request.getPhone())
+                        .passwordHash(passwordEncoder.encode("Password123!"))
+                        .role(Role.CONTRACTOR)
+                        .status(UserStatus.ACTIVE)
+                        .build();
+                return userRepository.save(newUser);
+            });
+        } else {
+            throw new IllegalArgumentException("Either userId or contractor email must be provided");
+        }
 
-        if (contractorRepository.findByUserId(request.getUserId()).isPresent()) {
-            throw new DuplicateResourceException("A contractor profile already exists for this user");
+        if (contractorRepository.findByUserId(user.getId()).isPresent()) {
+            throw new DuplicateResourceException("A contractor profile already exists for user: " + user.getEmail());
         }
 
         Vendor vendor = vendorRepository.findById(request.getVendorId())
