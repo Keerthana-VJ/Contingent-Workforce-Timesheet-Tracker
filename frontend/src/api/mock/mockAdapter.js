@@ -6,10 +6,14 @@ export const setupMockAdapter = (axiosInstance) => {
 
   // Users
   const users = [
-    { id: 'u1', email: 'admin@tracker.com', name: 'Admin User', role: 'ADMIN' },
-    { id: 'u2', email: 'vendor@tracker.com', name: 'Acme Corp', role: 'VENDOR' },
-    { id: 'u3', email: 'contractor@tracker.com', name: 'John Doe', role: 'CONTRACTOR' },
-    { id: 'u4', email: 'manager@tracker.com', name: 'Jane Smith', role: 'MANAGER' },
+    { id: 'u1', email: 'admin@example.com', name: 'Alexander Admin', role: 'ADMIN' },
+    { id: 'u2', email: 'manager@example.com', name: 'Michael Manager', role: 'MANAGER' },
+    { id: 'u3', email: 'vendor@example.com', name: 'Victor Vendor', role: 'VENDOR' },
+    { id: 'u4', email: 'contractor@example.com', name: 'John Contractor', role: 'CONTRACTOR' },
+    { id: 'u5', email: 'admin@tracker.com', name: 'Admin User', role: 'ADMIN' },
+    { id: 'u6', email: 'vendor@tracker.com', name: 'Acme Corp', role: 'VENDOR' },
+    { id: 'u7', email: 'contractor@tracker.com', name: 'John Doe', role: 'CONTRACTOR' },
+    { id: 'u8', email: 'manager@tracker.com', name: 'Jane Smith', role: 'MANAGER' },
   ];
 
   const vendors = [
@@ -46,12 +50,12 @@ export const setupMockAdapter = (axiosInstance) => {
   // ===================== AUTH ROUTES =====================
   mock.onPost('/auth/login').reply((config) => {
     const { email, password } = JSON.parse(config.data);
-    const user = users.find((u) => u.email === email);
-    if (user && password === 'password') {
+    const user = users.find((u) => u.email.toLowerCase() === (email || '').toLowerCase());
+    if (user && (password === 'password' || password === 'Password123!')) {
       // Embed user ID in the mock token to identify them later
       return [200, { token: `mock-jwt-token-${user.id}`, user }];
     }
-    return [401, { message: 'Invalid credentials. Use any listed email and "password".' }];
+    return [401, { message: 'Invalid credentials. Use any listed email and "Password123!" or "password".' }];
   });
 
   mock.onGet('/auth/me').reply((config) => {
