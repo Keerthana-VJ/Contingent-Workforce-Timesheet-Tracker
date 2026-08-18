@@ -44,6 +44,7 @@ public class TimesheetServiceImpl implements TimesheetService {
     private final TimesheetRepository timesheetRepository;
     private final ContractorRepository contractorRepository;
     private final ProjectRepository projectRepository;
+    private final MilestoneRepository milestoneRepository;
     private final UserRepository userRepository;
     private final VendorRepository vendorRepository;
     private final ContractorServiceImpl contractorService;
@@ -71,9 +72,15 @@ public class TimesheetServiceImpl implements TimesheetService {
         BigDecimal totalHours = calculateAndValidateHours(request.getStartTime(), request.getEndTime(),
                 request.getBreakHours());
 
+        Milestone milestone = null;
+        if (request.getMilestoneId() != null) {
+            milestone = milestoneRepository.findById(request.getMilestoneId()).orElse(null);
+        }
+
         Timesheet timesheet = Timesheet.builder()
                 .contractor(contractor)
                 .project(project)
+                .milestone(milestone)
                 .workDate(request.getWorkDate())
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
@@ -164,12 +171,18 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         if (SecurityUtils.isContractor()) {
             Contractor contractor = contractorRepository.findByUserId(SecurityUtils.getCurrentUserId()).orElse(null);
-            if (contractor != null)
+            if (contractor != null) {
                 effectiveContractorId = contractor.getId();
+            } else {
+                return PageResponse.empty();
+            }
         } else if (SecurityUtils.isVendor()) {
             Vendor vendor = vendorRepository.findByEmail(SecurityUtils.getCurrentUserEmail()).orElse(null);
-            if (vendor != null)
+            if (vendor != null) {
                 effectiveVendorId = vendor.getId();
+            } else {
+                return PageResponse.empty();
+            }
         }
 
         Page<Timesheet> page = timesheetRepository.findWithFilters(effectiveContractorId, effectiveVendorId, projectId,
@@ -211,17 +224,19 @@ public class TimesheetServiceImpl implements TimesheetService {
         approvalService.recordApproval(EntityType.TIMESHEET, timesheet.getId(), currentUser, null,
                 ApprovalStatus.PENDING, "Timesheet submitted for approval");
 
-        // Notify Project Manager
-        if (timesheet.getProject().getManager() != null) {
-            notificationService.createNotification(
-                    timesheet.getProject().getManager(),
-                    "Timesheet Submitted",
-                    String.format("%s submitted a timesheet for project '%s' on %s (%.2f hours).",
-                            timesheet.getContractor().getUser().getName(),
-                            timesheet.getProject().getProjectName(),
-                            timesheet.getWorkDate(),
-                            timesheet.getTotalHours()),
-                    NotificationType.TIMESHEET);
+        // Notify Vendor Partner
+        if (timesheet.getContractor().getVendor() != null && timesheet.getContractor().getVendor().getEmail() != null) {
+            userRepository.findByEmail(timesheet.getContractor().getVendor().getEmail()).ifPresent(vendorUser -> {
+                notificationService.createNotification(
+                        vendorUser,
+                        "Contractor Timesheet Submitted",
+                        String.format("%s submitted a timesheet for project '%s' on %s (%.2f hours) requiring your vendor approval.",
+                                timesheet.getContractor().getUser().getName(),
+                                timesheet.getProject().getProjectName(),
+                                timesheet.getWorkDate(),
+                                timesheet.getTotalHours()),
+                        NotificationType.TIMESHEET);
+            });
         }
 
         return mapToTimesheetResponse(updated);
@@ -236,6 +251,14 @@ public class TimesheetServiceImpl implements TimesheetService {
         if (timesheet.getStatus() != TimesheetStatus.SUBMITTED) {
             throw new InvalidStateTransitionException(
                     "Only SUBMITTED timesheets can be approved. Current status: " + timesheet.getStatus());
+        }
+
+        if (SecurityUtils.isVendor()) {
+            Vendor currentVendor = vendorRepository.findByEmail(SecurityUtils.getCurrentUserEmail()).orElse(null);
+            if (currentVendor == null || timesheet.getContractor().getVendor() == null ||
+                    !currentVendor.getId().equals(timesheet.getContractor().getVendor().getId())) {
+                throw new AccessDeniedException("Vendors can only approve timesheets for their own contractors");
+            }
         }
 
         User approver = userRepository.findById(SecurityUtils.getCurrentUserId())
@@ -254,7 +277,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         notificationService.createNotification(
                 timesheet.getContractor().getUser(),
                 "Timesheet Approved",
-                String.format("Your timesheet for %s on project '%s' has been approved by %s.",
+                String.format("Your timesheet for %s on project '%s' has been approved by vendor %s.",
                         timesheet.getWorkDate(),
                         timesheet.getProject().getProjectName(),
                         approver.getName()),
@@ -272,6 +295,14 @@ public class TimesheetServiceImpl implements TimesheetService {
         if (timesheet.getStatus() != TimesheetStatus.SUBMITTED) {
             throw new InvalidStateTransitionException(
                     "Only SUBMITTED timesheets can be rejected. Current status: " + timesheet.getStatus());
+        }
+
+        if (SecurityUtils.isVendor()) {
+            Vendor currentVendor = vendorRepository.findByEmail(SecurityUtils.getCurrentUserEmail()).orElse(null);
+            if (currentVendor == null || timesheet.getContractor().getVendor() == null ||
+                    !currentVendor.getId().equals(timesheet.getContractor().getVendor().getId())) {
+                throw new AccessDeniedException("Vendors can only reject timesheets for their own contractors");
+            }
         }
 
         User approver = userRepository.findById(SecurityUtils.getCurrentUserId())
@@ -368,6 +399,8 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .contractor(contractorService.mapToContractorResponse(timesheet.getContractor()))
                 .projectId(timesheet.getProject().getId())
                 .projectName(timesheet.getProject().getProjectName())
+                .milestoneId(timesheet.getMilestone() != null ? timesheet.getMilestone().getId() : null)
+                .milestoneName(timesheet.getMilestone() != null ? timesheet.getMilestone().getMilestoneName() : null)
                 .workDate(timesheet.getWorkDate())
                 .startTime(timesheet.getStartTime())
                 .endTime(timesheet.getEndTime())

@@ -32,8 +32,15 @@ public class Milestone {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
     @Column(name = "due_date")
     private LocalDate dueDate;
+
+    @Column(name = "assigned_days")
+    @Builder.Default
+    private Integer assignedDays = 10;
 
     @Column(name = "billing_amount", nullable = false, precision = 15, scale = 2)
     @Builder.Default

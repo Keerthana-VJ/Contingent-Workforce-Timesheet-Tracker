@@ -19,6 +19,7 @@ import { TimesheetsList } from '../pages/timesheets/TimesheetsList';
 import { MilestonesList } from '../pages/milestones/MilestonesList';
 import { InvoicesList } from '../pages/invoices/InvoicesList';
 import { ApprovalsCenter } from '../pages/approvals/ApprovalsCenter';
+import { ManagersList } from '../pages/admin/ManagersList';
 
 import { VendorDashboard } from '../pages/vendor/VendorDashboard';
 import { ContractorDashboard } from '../pages/contractor/ContractorDashboard';
@@ -56,6 +57,7 @@ export const AppRoutes = () => {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="vendors" element={<VendorsList />} />
           <Route path="contractors" element={<ContractorsList />} />
+          <Route path="managers" element={<ManagersList />} />
           <Route path="projects" element={<ProjectsList />} />
           <Route path="timesheets" element={<TimesheetsList />} />
           <Route path="milestones" element={<MilestonesList />} />
@@ -72,6 +74,7 @@ export const AppRoutes = () => {
           <Route path="contractors" element={<ContractorsList />} />
           <Route path="projects" element={<ProjectsList />} />
           <Route path="timesheets" element={<TimesheetsList />} />
+          <Route path="approvals" element={<ApprovalsCenter />} />
           <Route path="milestones" element={<MilestonesList />} />
           <Route path="invoices" element={<InvoicesList />} />
         </Route>

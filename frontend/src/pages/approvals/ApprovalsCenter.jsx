@@ -6,19 +6,42 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { FormInput } from '../../components/common/FormInput';
-import { CheckCircle, XCircle, Eye, AlertCircle, FileText, Calendar, DollarSign, User, Briefcase, History, CheckCheck, Clock } from 'lucide-react';
+import { 
+  CheckCircle, 
+  XCircle, 
+  Eye, 
+  AlertCircle, 
+  FileText, 
+  Calendar, 
+  DollarSign, 
+  User, 
+  Briefcase, 
+  History, 
+  CheckCheck, 
+  Clock,
+  ShieldCheck,
+  Building2,
+  UserCheck
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const ApprovalsCenter = () => {
+  const { role } = useAuth();
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusTab, setStatusTab] = useState('PENDING'); // PENDING | APPROVED | REJECTED | ALL
-  const [typeFilter, setTypeFilter] = useState('ALL'); // ALL | Timesheet | Invoice
+  
+  // Default type filter based on role: Vendors approve Timesheets; Managers approve Invoices
+  const [typeFilter, setTypeFilter] = useState(() => {
+    if (role === 'VENDOR') return 'Timesheet';
+    if (role === 'MANAGER') return 'Invoice';
+    return 'ALL';
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackType, setFeedbackType] = useState('success');
-  const { role } = useAuth();
   
   // Modal states
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
@@ -41,6 +64,14 @@ export const ApprovalsCenter = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const canApproveItem = (item) => {
+    if (!item || item.status !== 'PENDING') return false;
+    if (role === 'ADMIN') return true;
+    if (role === 'VENDOR' && item.type.toLowerCase() === 'timesheet') return true;
+    if (role === 'MANAGER' && item.type.toLowerCase() === 'invoice') return true;
+    return false;
   };
 
   const handleApprove = async (approval) => {
@@ -92,17 +123,24 @@ export const ApprovalsCenter = () => {
     }
   };
 
-  // Counts for status tabs
-  const pendingCount = approvals.filter(a => a.status === 'PENDING').length;
-  const approvedCount = approvals.filter(a => a.status === 'APPROVED').length;
-  const rejectedCount = approvals.filter(a => a.status === 'REJECTED').length;
+  // Filter based on active role relevance
+  const roleFilteredApprovals = approvals.filter(a => {
+    if (role === 'VENDOR') return a.type.toLowerCase() === 'timesheet';
+    if (role === 'MANAGER') return a.type.toLowerCase() === 'invoice';
+    return true;
+  });
 
-  const filteredApprovals = approvals.filter(a => {
+  // Counts for status tabs
+  const pendingCount = roleFilteredApprovals.filter(a => a.status === 'PENDING').length;
+  const approvedCount = roleFilteredApprovals.filter(a => a.status === 'APPROVED').length;
+  const rejectedCount = roleFilteredApprovals.filter(a => a.status === 'REJECTED').length;
+
+  const filteredApprovals = roleFilteredApprovals.filter(a => {
     // Status filter
     if (statusTab !== 'ALL' && a.status !== statusTab) {
       return false;
     }
-    // Type filter
+    // Type filter (for Admin who can toggle ALL | Timesheet | Invoice)
     if (typeFilter !== 'ALL' && a.type.toLowerCase() !== typeFilter.toLowerCase()) {
       return false;
     }
@@ -177,7 +215,7 @@ export const ApprovalsCenter = () => {
     { 
       header: 'Actions', 
       cell: (row) => {
-        const isPending = row.status === 'PENDING';
+        const canAction = canApproveItem(row);
         return (
           <div className="flex items-center space-x-1.5">
             <button 
@@ -187,11 +225,11 @@ export const ApprovalsCenter = () => {
             >
               <Eye className="h-4 w-4" />
             </button>
-            {isPending && (role === 'ADMIN' || role === 'MANAGER') && (
+            {canAction && (
               <>
                 <button 
                   className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 transition-colors" 
-                  title="Approve Submission"
+                  title={`Approve ${row.type}`}
                   onClick={() => handleApprove(row)}
                   disabled={actionLoading}
                 >
@@ -199,7 +237,7 @@ export const ApprovalsCenter = () => {
                 </button>
                 <button 
                   className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-red-600 dark:hover:bg-slate-800 transition-colors" 
-                  title="Reject Submission"
+                  title={`Reject ${row.type}`}
                   onClick={() => openRejectModal(row)}
                   disabled={actionLoading}
                 >
@@ -228,14 +266,31 @@ export const ApprovalsCenter = () => {
         </div>
       )}
 
+      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Approvals Center
+            {role === 'VENDOR' ? 'Contractor Timesheets Approvals' : (role === 'MANAGER' ? 'Vendor Invoices Approvals' : 'Approvals Center')}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Review pending timesheets and vendor invoices, or inspect approved and rejected history records.
+            {role === 'VENDOR' 
+              ? 'Review and sign off timesheets submitted by your contracted talent before compiling invoices.' 
+              : (role === 'MANAGER' 
+                  ? 'Inspect and authorize vendor-submitted invoices verified against delivered milestones and sprint hours.' 
+                  : 'Enterprise authorization hub for timesheets and vendor invoice payouts.')}
           </p>
+        </div>
+      </div>
+
+      {/* Two-Tier Governance Role Guide */}
+      <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 p-4 dark:border-indigo-900/50 dark:bg-indigo-950/30 flex items-start gap-3 text-xs text-indigo-900 dark:text-indigo-200">
+        <ShieldCheck className="h-5 w-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+        <div>
+          <strong className="block mb-0.5">Two-Tier Governance Approval Workflow:</strong>
+          <span>
+            1. <strong>Vendors approve Contractor Timesheets</strong> $\rightarrow$ Talent submits timesheets which are verified by their partner Vendor Agency.<br/>
+            2. <strong>Managers approve Vendor Invoices</strong> $\rightarrow$ Vendor aggregates approved deliverables into an invoice submitted to the Enterprise Manager.
+          </span>
         </div>
       </div>
 
@@ -245,7 +300,7 @@ export const ApprovalsCenter = () => {
           { key: 'PENDING', label: 'Pending Review', count: pendingCount, icon: Clock, color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40' },
           { key: 'APPROVED', label: 'Approved History', count: approvedCount, icon: CheckCheck, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40' },
           { key: 'REJECTED', label: 'Rejected History', count: rejectedCount, icon: XCircle, color: 'text-red-600 bg-red-50 dark:bg-red-950/40' },
-          { key: 'ALL', label: 'All Records', count: approvals.length, icon: History, color: 'text-slate-600 bg-slate-100 dark:bg-slate-800' }
+          { key: 'ALL', label: 'All Records', count: roleFilteredApprovals.length, icon: History, color: 'text-slate-600 bg-slate-100 dark:bg-slate-800' }
         ].map(tab => {
           const Icon = tab.icon;
           return (
@@ -270,22 +325,38 @@ export const ApprovalsCenter = () => {
       
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
         <div className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-3.5 flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
-          {/* Sub-Filter by Item Type */}
-          <div className="flex space-x-1.5 bg-slate-200/70 dark:bg-slate-800 p-1 rounded-lg">
-            {['ALL', 'Timesheet', 'Invoice'].map(type => (
-              <button
-                key={type}
-                onClick={() => setTypeFilter(type)}
-                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                  typeFilter === type
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                {type === 'ALL' ? 'All Types' : `${type}s`}
-              </button>
-            ))}
-          </div>
+          {/* Sub-Filter by Item Type (Admin only or role toggle) */}
+          {role === 'ADMIN' ? (
+            <div className="flex space-x-1.5 bg-slate-200/70 dark:bg-slate-800 p-1 rounded-lg">
+              {['ALL', 'Timesheet', 'Invoice'].map(type => (
+                <button
+                  key={type}
+                  onClick={() => setTypeFilter(type)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                    typeFilter === type
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {type === 'ALL' ? 'All Types' : `${type}s`}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+              {role === 'VENDOR' ? (
+                <span className="flex items-center gap-1.5 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2.5 py-1 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <User className="h-3.5 w-3.5" />
+                  Contractor Timesheets Queue
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                  <FileText className="h-3.5 w-3.5" />
+                  Vendor Invoices Queue
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="relative w-full max-w-xs">
             <input
@@ -304,7 +375,7 @@ export const ApprovalsCenter = () => {
               <CheckCircle className="h-6 w-6" />
             </div>
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-              {statusTab === 'PENDING' ? 'All caught up! No pending approvals.' : 'No records found in this view.'}
+              {statusTab === 'PENDING' ? 'All caught up! No pending items requiring your sign-off.' : 'No records found in this view.'}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm">
               {statusTab === 'PENDING' 
@@ -371,7 +442,7 @@ export const ApprovalsCenter = () => {
             {selectedApproval.status === 'APPROVED' && (
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 p-3 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
-                <span>Verified and approved. Linked to billing run.</span>
+                <span>Verified and approved.</span>
               </div>
             )}
 
@@ -379,7 +450,7 @@ export const ApprovalsCenter = () => {
               <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
                 Close
               </Button>
-              {selectedApproval.status === 'PENDING' && (role === 'ADMIN' || role === 'MANAGER') && (
+              {canApproveItem(selectedApproval) && (
                 <>
                   <Button 
                     variant="danger" 

@@ -16,5 +16,6 @@ public interface MilestoneService {
     List<MilestoneResponse> getMilestonesByProject(UUID projectId);
     PageResponse<MilestoneResponse> getMilestones(UUID projectId, MilestoneStatus status, String search, Pageable pageable);
     MilestoneResponse approveMilestone(UUID id);
+    MilestoneResponse completeMilestone(UUID id);
     void deleteMilestone(UUID id);
 }

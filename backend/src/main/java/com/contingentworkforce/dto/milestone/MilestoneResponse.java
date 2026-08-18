@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -22,7 +23,13 @@ public class MilestoneResponse {
     private String projectName;
     private String milestoneName;
     private String description;
+    private LocalDate startDate;
     private LocalDate dueDate;
+    private Integer assignedDays; // Days assigned to complete the work
+    private Integer completedDays; // Days of completion based on uploaded contractor timesheets
+    private Double loggedHours; // Total hours logged from timesheets
+    private Integer timesheetsCount;
+    private List<String> contributingContractors;
     private BigDecimal billingAmount;
     private Integer completionPercentage;
     private MilestoneStatus status;

@@ -75,6 +75,14 @@ public class MilestoneController {
         return ResponseEntity.ok(ApiResponse.success("Milestone approved for invoice billing", response));
     }
 
+    @PostMapping("/{id}/complete")
+    @PreAuthorize("hasAnyRole('CONTRACTOR', 'MANAGER', 'ADMIN')")
+    @Operation(summary = "Contractor or Manager marks a milestone as accomplished/completed")
+    public ResponseEntity<ApiResponse<MilestoneResponse>> completeMilestone(@PathVariable UUID id) {
+        MilestoneResponse response = milestoneService.completeMilestone(id);
+        return ResponseEntity.ok(ApiResponse.success("Milestone marked as accomplished successfully", response));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @Operation(summary = "Delete milestone")

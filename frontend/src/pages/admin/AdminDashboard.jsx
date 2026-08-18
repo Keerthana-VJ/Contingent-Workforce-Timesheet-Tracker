@@ -29,54 +29,34 @@ export const AdminDashboard = () => {
         setMetrics(data);
 
         // Parse monthly billing
-        if (Array.isArray(data.monthlyBilling) && data.monthlyBilling.length > 0) {
+        if (Array.isArray(data.monthlyBilling)) {
           setBillingData(data.monthlyBilling.map(b => ({
             month: b.month || 'N/A',
             amount: Number(b.amount || 0),
             hours: Number(b.hours || 0)
           })));
         } else {
-          // Fallback sample data if no historical invoices
-          setBillingData([
-            { month: '2026-01', amount: 45000, hours: 320 },
-            { month: '2026-02', amount: 52000, hours: 380 },
-            { month: '2026-03', amount: 61000, hours: 410 },
-            { month: '2026-04', amount: 58000, hours: 390 },
-            { month: '2026-05', amount: 72000, hours: 460 },
-            { month: '2026-06', amount: 85000, hours: 520 },
-          ]);
+          setBillingData([]);
         }
 
         // Parse recent activities
-        if (Array.isArray(data.recentActivities) && data.recentActivities.length > 0) {
+        if (Array.isArray(data.recentActivities)) {
           setActivities(data.recentActivities);
         } else {
-          setActivities([
-            { id: '1', title: 'Timesheet Approved', description: 'Sprint delivery verified for Enterprise Cloud Migration', actorName: 'Michael Manager', timestamp: new Date(Date.now() - 3600000 * 2).toISOString() },
-            { id: '2', title: 'Invoice Submitted', description: 'INV-2026-002 submitted by Apex Global Technologies', actorName: 'Victor Vendor', timestamp: new Date(Date.now() - 3600000 * 5).toISOString() },
-            { id: '3', title: 'Milestone Completed', description: 'Core Data Services Migration 100% completed', actorName: 'Jane Smith', timestamp: new Date(Date.now() - 3600000 * 24).toISOString() },
-            { id: '4', title: 'Contractor Onboarded', description: 'Sarah DevOps joined AI Timesheet & Fraud Analytics', actorName: 'System', timestamp: new Date(Date.now() - 3600000 * 48).toISOString() },
-          ]);
+          setActivities([]);
         }
       } catch (error) {
         console.error("Failed to load dashboard data", error);
-        // Fallback default metrics so UI never renders empty
         setMetrics({
-          totalVendors: 2,
-          totalContractors: 2,
-          activeProjects: 2,
-          pendingTimesheets: 1,
-          pendingInvoices: 1,
-          totalBilling: 283200
+          totalVendors: 0,
+          totalContractors: 0,
+          activeProjects: 0,
+          pendingTimesheets: 0,
+          pendingInvoices: 0,
+          totalBilling: 0
         });
-        setBillingData([
-          { month: 'Jan', amount: 45000 },
-          { month: 'Feb', amount: 52000 },
-          { month: 'Mar', amount: 61000 },
-          { month: 'Apr', amount: 58000 },
-          { month: 'May', amount: 72000 },
-          { month: 'Jun', amount: 85000 },
-        ]);
+        setBillingData([]);
+        setActivities([]);
       } finally {
         setLoading(false);
       }

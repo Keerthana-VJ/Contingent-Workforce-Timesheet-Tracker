@@ -6,10 +6,11 @@ import { Modal } from '../../components/common/Modal';
 import { FormInput } from '../../components/common/FormInput';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { getContractors } from '../../api/contractorApi';
-import { getProjects } from '../../api/projectApi';
+import { getProjects, getMyProjects } from '../../api/projectApi';
 import { getTimesheets } from '../../api/timesheetApi';
 import { getInvoices, createInvoice } from '../../api/invoiceApi';
 import { getMilestones } from '../../api/milestoneApi';
+import { approveApprovalItem } from '../../api/approvalApi';
 import { useAuth } from '../../context/AuthContext';
 import { 
   Users, 
@@ -38,6 +39,7 @@ export const VendorDashboard = () => {
     totalBilling: 0
   });
   const [projects, setProjects] = useState([]);
+  const [timesheets, setTimesheets] = useState([]);
   const [recentInvoices, setRecentInvoices] = useState([]);
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -61,7 +63,7 @@ export const VendorDashboard = () => {
     try {
       const [contractorsData, projectsData, timesheetsData, invoicesData, milestonesData] = await Promise.all([
         getContractors(),
-        getProjects(),
+        getMyProjects(),
         getTimesheets(),
         getInvoices(),
         getMilestones()
@@ -74,6 +76,7 @@ export const VendorDashboard = () => {
       const mList = Array.isArray(milestonesData) ? milestonesData : (milestonesData?.content || milestonesData?.data?.content || milestonesData?.data || []);
 
       setProjects(pList);
+      setTimesheets(tList);
       setRecentInvoices(iList.slice(0, 5));
 
       const totalBilled = iList
@@ -90,7 +93,7 @@ export const VendorDashboard = () => {
         pendingTimesheets: pendingTsCount,
         completedMilestones: completedMsCount,
         pendingInvoices: pendingInvCount,
-        totalBilling: totalBilled > 0 ? totalBilled : 185000
+        totalBilling: totalBilled
       });
     } catch (err) {
       console.error("Failed to load vendor metrics", err);
@@ -223,6 +226,78 @@ export const VendorDashboard = () => {
         <StatCard title="Total Approved Billing" value={`$${metrics.totalBilling.toLocaleString()}`} icon={DollarSign} />
       </div>
 
+      {/* Pending Contractor Timesheets Sign-off Queue */}
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+          <div>
+            <h3 className="font-bold text-slate-900 dark:text-white text-sm">
+              Contractor Timesheets Sign-off ({timesheets.filter(t => (t.status || '').toUpperCase() === 'SUBMITTED').length})
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Review and sign off timesheets submitted by your contracted talent before invoicing
+            </p>
+          </div>
+          <button 
+            onClick={() => navigate('/vendor/approvals')}
+            className="text-xs font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 flex items-center gap-1"
+          >
+            Go to Approvals Center <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {timesheets.filter(t => (t.status || '').toUpperCase() === 'SUBMITTED').length === 0 ? (
+          <div className="p-8 text-center text-xs text-slate-500 flex flex-col items-center justify-center">
+            <CheckCircle className="h-8 w-8 text-emerald-500 mb-2" />
+            <span className="font-semibold text-slate-800 dark:text-slate-200">No timesheets awaiting vendor approval.</span>
+            <span className="text-[11px] text-slate-400 mt-0.5">All contractor timesheets are reviewed and up to date.</span>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {timesheets.filter(t => (t.status || '').toUpperCase() === 'SUBMITTED').map(ts => (
+              <div key={ts.id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                    <Clock className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs text-slate-900 dark:text-white">
+                      {ts.contractor?.user?.name || ts.contractorName || 'Contractor'} — TS-{(ts.id || '').toString().substring(0, 8).toUpperCase()}
+                    </h4>
+                    <span className="text-[11px] text-slate-500">
+                      Project: {ts.project?.projectName || ts.projectName || 'General Delivery'} • {ts.workDate || 'Date'} • <strong className="text-slate-800 dark:text-slate-200">{ts.totalHours || 0} hours</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={async () => {
+                      try {
+                        await approveApprovalItem({ type: 'timesheet', originalId: ts.id });
+                        setFeedbackMsg('Timesheet approved successfully!');
+                        setTimeout(() => setFeedbackMsg(''), 3000);
+                        fetchVendorData();
+                      } catch (e) {
+                        alert(e.response?.data?.message || 'Failed to approve timesheet');
+                      }
+                    }}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 transition-colors border border-emerald-200 dark:border-emerald-800 flex items-center gap-1"
+                  >
+                    <CheckCircle className="h-3.5 w-3.5" /> Approve
+                  </button>
+                  <button
+                    onClick={() => navigate('/vendor/approvals')}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 transition-colors border border-slate-200 dark:border-slate-700"
+                  >
+                    Review
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Recent Invoices Section */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
@@ -231,7 +306,7 @@ export const VendorDashboard = () => {
               Recent Billing Invoices
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Latest invoices submitted to client enterprise accounts
+              Invoices submitted for Enterprise Manager authorization
             </p>
           </div>
           <button 

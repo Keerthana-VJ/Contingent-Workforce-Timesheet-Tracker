@@ -23,7 +23,9 @@ public class MilestoneRequest {
     private String milestoneName;
 
     private String description;
+    private LocalDate startDate;
     private LocalDate dueDate;
+    private Integer assignedDays; // Total days assigned to this milestone work
 
     @NotNull(message = "Billing amount is required")
     @PositiveOrZero(message = "Billing amount cannot be negative")

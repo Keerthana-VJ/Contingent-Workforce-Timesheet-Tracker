@@ -49,6 +49,10 @@ public class Vendor {
     @Builder.Default
     private VendorStatus status = VendorStatus.ACTIVE;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manager_id")
+    private User manager;
+
     @JsonIgnore
     @OneToMany(mappedBy = "vendor", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

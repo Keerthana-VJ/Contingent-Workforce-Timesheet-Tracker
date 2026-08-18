@@ -114,9 +114,35 @@ public class ProjectServiceImpl implements ProjectService {
 
         if (SecurityUtils.isVendor()) {
             Vendor currentVendor = vendorRepository.findByEmail(SecurityUtils.getCurrentUserEmail()).orElse(null);
-            if (currentVendor != null) effectiveVendorId = currentVendor.getId();
+            if (currentVendor != null) {
+                effectiveVendorId = currentVendor.getId();
+            } else {
+                return PageResponse.empty();
+            }
         } else if (SecurityUtils.isManager()) {
             effectiveManagerId = SecurityUtils.getCurrentUserId();
+        } else if (SecurityUtils.isContractor()) {
+            Contractor contractor = contractorRepository.findByUserId(SecurityUtils.getCurrentUserId()).orElse(null);
+            if (contractor == null) {
+                return PageResponse.empty();
+            }
+            List<ProjectMember> memberships = projectMemberRepository.findByContractorIdAndStatus(contractor.getId(), MemberStatus.ACTIVE);
+            if (memberships.isEmpty()) {
+                return PageResponse.empty();
+            }
+            List<ProjectResponse> allottedList = memberships.stream()
+                    .map(m -> mapToProjectResponse(m.getProject()))
+                    .filter(p -> status == null || p.getStatus() == status)
+                    .filter(p -> search == null || p.getProjectName().toLowerCase().contains(search.toLowerCase()))
+                    .collect(Collectors.toList());
+            return PageResponse.<ProjectResponse>builder()
+                    .content(allottedList)
+                    .pageNumber(0)
+                    .pageSize(Math.max(1, allottedList.size()))
+                    .totalElements(allottedList.size())
+                    .totalPages(1)
+                    .last(true)
+                    .build();
         }
 
         Page<Project> page = projectRepository.findWithFilters(effectiveVendorId, effectiveManagerId, status, search, pageable);

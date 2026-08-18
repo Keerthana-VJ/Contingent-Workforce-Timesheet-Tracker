@@ -30,4 +30,15 @@ public class PageResponse<T> {
                 .last(page.isLast())
                 .build();
     }
+
+    public static <T> PageResponse<T> empty() {
+        return PageResponse.<T>builder()
+                .content(List.of())
+                .pageNumber(0)
+                .pageSize(10)
+                .totalElements(0)
+                .totalPages(0)
+                .last(true)
+                .build();
+    }
 }

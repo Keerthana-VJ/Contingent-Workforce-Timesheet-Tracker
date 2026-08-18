@@ -12,11 +12,13 @@ C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\controller\ProjectController.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\controller\ReportController.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\controller\TimesheetController.java
+C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\controller\UserController.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\controller\VendorController.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\dto\approval\ApprovalResponse.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\dto\auth\AuthResponse.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\dto\auth\LoginRequest.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\dto\auth\RegisterRequest.java
+C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\dto\auth\UserRequest.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\dto\auth\UserResponse.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\dto\common\ApiResponse.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\dto\common\PageResponse.java
@@ -109,6 +111,7 @@ C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\service\impl\ProjectServiceImpl.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\service\impl\ReportServiceImpl.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\service\impl\TimesheetServiceImpl.java
+C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\service\impl\UserServiceImpl.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\service\impl\VendorPerformanceServiceImpl.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\service\impl\VendorServiceImpl.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\service\InvoiceService.java
@@ -117,6 +120,7 @@ C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\service\ProjectService.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\service\ReportService.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\service\TimesheetService.java
+C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\service\UserService.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\service\validation\TimesheetValidationEngine.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\service\VendorPerformanceService.java
 C:\Users\santh\Downloads\prog\Contingent-Workforce-Timesheet-Tracker\backend\src\main\java\com\contingentworkforce\service\VendorService.java

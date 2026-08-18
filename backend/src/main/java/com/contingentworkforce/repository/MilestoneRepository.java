@@ -33,6 +33,17 @@ public interface MilestoneRepository extends JpaRepository<Milestone, UUID>, Jpa
 
     @Query("SELECT m FROM Milestone m WHERE " +
            "(:projectId IS NULL OR m.project.id = :projectId) AND " +
+           "(:projectIds IS NULL OR m.project.id IN :projectIds) AND " +
+           "(:status IS NULL OR m.status = :status) AND " +
+           "(:search IS NULL OR LOWER(m.milestoneName) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<Milestone> findWithFiltersAndProjectIds(@Param("projectId") UUID projectId,
+                                                 @Param("projectIds") List<UUID> projectIds,
+                                                 @Param("status") MilestoneStatus status,
+                                                 @Param("search") String search,
+                                                 Pageable pageable);
+
+    @Query("SELECT m FROM Milestone m WHERE " +
+           "(:projectId IS NULL OR m.project.id = :projectId) AND " +
            "(:status IS NULL OR m.status = :status) AND " +
            "(:search IS NULL OR LOWER(m.milestoneName) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Milestone> findWithFilters(@Param("projectId") UUID projectId,

@@ -38,5 +38,6 @@ public class TimesheetRequest {
     @Builder.Default
     private BigDecimal breakHours = BigDecimal.ZERO;
 
+    private UUID milestoneId; // Milestone worked on / reached
     private String description;
 }

@@ -49,7 +49,16 @@ public class ContractorServiceImpl implements ContractorService {
                     .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + request.getUserId()));
         } else if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
             String email = request.getEmail().trim().toLowerCase();
-            user = userRepository.findByEmail(email).orElseGet(() -> {
+            String rawPassword = (request.getPassword() != null && !request.getPassword().trim().isEmpty())
+                    ? request.getPassword().trim()
+                    : "Password123!";
+            user = userRepository.findByEmail(email).map(existingUser -> {
+                if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+                    existingUser.setPasswordHash(passwordEncoder.encode(rawPassword));
+                    return userRepository.save(existingUser);
+                }
+                return existingUser;
+            }).orElseGet(() -> {
                 String userName = request.getName() != null && !request.getName().trim().isEmpty()
                         ? request.getName().trim()
                         : "Contractor User";
@@ -57,7 +66,7 @@ public class ContractorServiceImpl implements ContractorService {
                         .name(userName)
                         .email(email)
                         .phone(request.getPhone())
-                        .passwordHash(passwordEncoder.encode("Password123!"))
+                        .passwordHash(passwordEncoder.encode(rawPassword))
                         .role(Role.CONTRACTOR)
                         .status(UserStatus.ACTIVE)
                         .build();
@@ -159,6 +168,8 @@ public class ContractorServiceImpl implements ContractorService {
                     .orElse(null);
             if (currentVendor != null) {
                 effectiveVendorId = currentVendor.getId();
+            } else {
+                return PageResponse.empty();
             }
         }
 

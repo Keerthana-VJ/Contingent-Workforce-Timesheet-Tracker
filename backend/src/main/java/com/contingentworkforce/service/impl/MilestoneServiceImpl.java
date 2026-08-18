@@ -32,6 +32,16 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.contingentworkforce.entity.Timesheet;
+import com.contingentworkforce.entity.Contractor;
+import com.contingentworkforce.entity.Vendor;
+import com.contingentworkforce.entity.ProjectMember;
+import com.contingentworkforce.enums.MemberStatus;
+import com.contingentworkforce.repository.TimesheetRepository;
+import com.contingentworkforce.repository.ContractorRepository;
+import com.contingentworkforce.repository.VendorRepository;
+import com.contingentworkforce.repository.ProjectMemberRepository;
+
 @Service
 @RequiredArgsConstructor
 public class MilestoneServiceImpl implements MilestoneService {
@@ -41,6 +51,10 @@ public class MilestoneServiceImpl implements MilestoneService {
     private final UserRepository userRepository;
     private final ApprovalService approvalService;
     private final NotificationService notificationService;
+    private final TimesheetRepository timesheetRepository;
+    private final ContractorRepository contractorRepository;
+    private final VendorRepository vendorRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
     @Override
     @Transactional
@@ -48,6 +62,7 @@ public class MilestoneServiceImpl implements MilestoneService {
         Project project = projectRepository.findById(request.getProjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with id: " + request.getProjectId()));
 
+        Integer assignedDays = request.getAssignedDays() != null && request.getAssignedDays() > 0 ? request.getAssignedDays() : 10;
         Integer pct = request.getCompletionPercentage() != null ? request.getCompletionPercentage() : 0;
         MilestoneStatus status = request.getStatus();
         if (pct >= 100) {
@@ -60,7 +75,9 @@ public class MilestoneServiceImpl implements MilestoneService {
                 .project(project)
                 .milestoneName(request.getMilestoneName().trim())
                 .description(request.getDescription())
+                .startDate(request.getStartDate() != null ? request.getStartDate() : (project.getStartDate() != null ? project.getStartDate() : null))
                 .dueDate(request.getDueDate())
+                .assignedDays(assignedDays)
                 .billingAmount(request.getBillingAmount() != null ? request.getBillingAmount() : BigDecimal.ZERO)
                 .completionPercentage(pct)
                 .status(status)
@@ -78,7 +95,11 @@ public class MilestoneServiceImpl implements MilestoneService {
 
         milestone.setMilestoneName(request.getMilestoneName().trim());
         milestone.setDescription(request.getDescription());
+        if (request.getStartDate() != null) milestone.setStartDate(request.getStartDate());
         if (request.getDueDate() != null) milestone.setDueDate(request.getDueDate());
+        if (request.getAssignedDays() != null && request.getAssignedDays() > 0) {
+            milestone.setAssignedDays(request.getAssignedDays());
+        }
         if (request.getBillingAmount() != null) milestone.setBillingAmount(request.getBillingAmount());
 
         if (request.getCompletionPercentage() != null) {
@@ -125,7 +146,37 @@ public class MilestoneServiceImpl implements MilestoneService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<MilestoneResponse> getMilestones(UUID projectId, MilestoneStatus status, String search, Pageable pageable) {
-        Page<Milestone> page = milestoneRepository.findWithFilters(projectId, status, search, pageable);
+        List<UUID> allowedProjectIds = null;
+
+        if (SecurityUtils.isContractor()) {
+            Contractor contractor = contractorRepository.findByUserId(SecurityUtils.getCurrentUserId()).orElse(null);
+            if (contractor == null) {
+                return PageResponse.empty();
+            }
+            List<ProjectMember> memberships = projectMemberRepository.findByContractorIdAndStatus(contractor.getId(), MemberStatus.ACTIVE);
+            if (memberships.isEmpty()) {
+                return PageResponse.empty();
+            }
+            allowedProjectIds = memberships.stream().map(m -> m.getProject().getId()).collect(Collectors.toList());
+        } else if (SecurityUtils.isVendor()) {
+            Vendor vendor = vendorRepository.findByEmail(SecurityUtils.getCurrentUserEmail()).orElse(null);
+            if (vendor == null) {
+                return PageResponse.empty();
+            }
+            List<Project> vendorProjects = projectRepository.findByVendorId(vendor.getId());
+            if (vendorProjects.isEmpty()) {
+                return PageResponse.empty();
+            }
+            allowedProjectIds = vendorProjects.stream().map(Project::getId).collect(Collectors.toList());
+        } else if (SecurityUtils.isManager()) {
+            List<Project> managedProjects = projectRepository.findByManagerId(SecurityUtils.getCurrentUserId());
+            if (managedProjects.isEmpty()) {
+                return PageResponse.empty();
+            }
+            allowedProjectIds = managedProjects.stream().map(Project::getId).collect(Collectors.toList());
+        }
+
+        Page<Milestone> page = milestoneRepository.findWithFiltersAndProjectIds(projectId, allowedProjectIds, status, search, pageable);
         return PageResponse.from(page.map(this::mapToMilestoneResponse));
     }
 
@@ -175,6 +226,30 @@ public class MilestoneServiceImpl implements MilestoneService {
 
     @Override
     @Transactional
+    public MilestoneResponse completeMilestone(UUID id) {
+        Milestone milestone = milestoneRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Milestone not found with id: " + id));
+
+        milestone.setStatus(MilestoneStatus.COMPLETED);
+        milestone.setCompletionPercentage(100);
+        Milestone updated = milestoneRepository.save(milestone);
+
+        // Notify Project Manager that contractor accomplished the milestone
+        if (milestone.getProject().getManager() != null) {
+            notificationService.createNotification(
+                    milestone.getProject().getManager(),
+                    "Milestone Accomplished",
+                    String.format("Milestone '%s' for project '%s' has been marked as accomplished by the contractor.",
+                            milestone.getMilestoneName(), milestone.getProject().getProjectName()),
+                    NotificationType.MILESTONE
+            );
+        }
+
+        return mapToMilestoneResponse(updated);
+    }
+
+    @Override
+    @Transactional
     public void deleteMilestone(UUID id) {
         if (!milestoneRepository.existsById(id)) {
             throw new ResourceNotFoundException("Milestone not found with id: " + id);
@@ -184,15 +259,48 @@ public class MilestoneServiceImpl implements MilestoneService {
 
     public MilestoneResponse mapToMilestoneResponse(Milestone milestone) {
         if (milestone == null) return null;
+
+        Long distinctDays = timesheetRepository.countDistinctWorkDaysByMilestoneId(milestone.getId());
+        int completedDays = distinctDays != null ? distinctDays.intValue() : 0;
+
+        Double totalHours = timesheetRepository.sumTotalHoursByMilestoneId(milestone.getId());
+        double loggedHours = totalHours != null ? totalHours : 0.0;
+
+        List<Timesheet> timesheets = timesheetRepository.findByMilestoneId(milestone.getId());
+        List<String> contributingContractors = timesheets.stream()
+                .filter(t -> t.getContractor() != null && t.getContractor().getUser() != null)
+                .map(t -> t.getContractor().getUser().getName())
+                .distinct()
+                .collect(Collectors.toList());
+
+        int assignedDays = (milestone.getAssignedDays() != null && milestone.getAssignedDays() > 0)
+                ? milestone.getAssignedDays() : 10;
+
+        int completionPercentage;
+        if (milestone.getStatus() == MilestoneStatus.COMPLETED) {
+            if (completedDays == 0) {
+                completedDays = assignedDays;
+            }
+            completionPercentage = 100;
+        } else {
+            completionPercentage = (int) Math.min(100, Math.round(((double) completedDays / (double) assignedDays) * 100));
+        }
+
         return MilestoneResponse.builder()
                 .id(milestone.getId())
                 .projectId(milestone.getProject().getId())
                 .projectName(milestone.getProject().getProjectName())
                 .milestoneName(milestone.getMilestoneName())
                 .description(milestone.getDescription())
+                .startDate(milestone.getStartDate())
                 .dueDate(milestone.getDueDate())
+                .assignedDays(assignedDays)
+                .completedDays(completedDays)
+                .loggedHours(loggedHours)
+                .timesheetsCount(timesheets.size())
+                .contributingContractors(contributingContractors)
                 .billingAmount(milestone.getBillingAmount())
-                .completionPercentage(milestone.getCompletionPercentage())
+                .completionPercentage(completionPercentage)
                 .status(milestone.getStatus())
                 .approvedBy(milestone.getApprovedBy() != null ? AuthServiceImpl.mapToUserResponse(milestone.getApprovedBy()) : null)
                 .approvedAt(milestone.getApprovedAt())
