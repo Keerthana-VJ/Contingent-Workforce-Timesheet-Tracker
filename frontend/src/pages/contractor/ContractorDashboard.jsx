@@ -93,8 +93,8 @@ export const ContractorDashboard = () => {
             onClick={() => navigate('/contractor/timesheets')} 
             className="flex items-center gap-1.5 shadow-sm text-xs"
           >
-            <Plus className="h-4 w-4" />
-            Submit Timesheet
+            <Clock className="h-4 w-4" />
+            Manage Timesheets
           </Button>
         </div>
       </div>
