@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/common/Button';
 import { FormInput } from '../../components/common/FormInput';
-import { Building2, Shield, UserCheck, Briefcase, User, Sparkles } from 'lucide-react';
+import { Logo } from '../../components/common/Logo';
+import { Shield, UserCheck, Briefcase, User, Sparkles } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
   { role: 'Admin', email: 'admin@example.com', password: 'Password123!', icon: Shield, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800' },
@@ -49,13 +50,8 @@ export const Login = () => {
   return (
     <div className="rounded-2xl bg-white p-8 shadow-xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
       <div className="mb-6 flex flex-col items-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-600 text-white shadow-lg shadow-primary-500/30">
-          <Building2 className="h-7 w-7" />
-        </div>
-        <h2 className="mt-5 text-center text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          Welcome to Workforce Hub
-        </h2>
-        <p className="mt-1.5 text-center text-sm text-slate-500 dark:text-slate-400">
+        <Logo size="lg" className="mb-2" />
+        <p className="mt-1 text-center text-sm text-slate-500 dark:text-slate-400">
           Contingent Workforce & Timesheet Management
         </p>
       </div>

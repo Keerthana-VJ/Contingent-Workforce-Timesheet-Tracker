@@ -18,6 +18,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { Logo } from './Logo';
 
 const getNavigationByRole = (role) => {
   const routes = {
@@ -94,20 +95,8 @@ export const Sidebar = () => {
     >
       {/* Top Header Logo */}
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-3.5 dark:border-slate-800">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white font-black text-base shadow-sm">
-            ⚡
-          </div>
-          {isExpanded && (
-            <div className="flex flex-col overflow-hidden whitespace-nowrap animate-in fade-in duration-200">
-              <span className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">
-                WorkforceHub
-              </span>
-              <span className="text-[10px] text-slate-400 font-medium tracking-wide uppercase">
-                Enterprise Suite
-              </span>
-            </div>
-          )}
+        <div className="flex items-center gap-2.5 overflow-hidden">
+          <Logo size="md" collapsed={!isExpanded} />
         </div>
 
         {isExpanded && (
