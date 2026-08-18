@@ -84,16 +84,16 @@ public class TimesheetController {
     }
 
     @PostMapping("/{id}/approve")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
-    @Operation(summary = "Approve submitted timesheet (Manager/Admin only)")
+    @PreAuthorize("hasAnyRole('VENDOR', 'ADMIN')")
+    @Operation(summary = "Approve submitted timesheet (Vendor/Admin)")
     public ResponseEntity<ApiResponse<TimesheetResponse>> approveTimesheet(@PathVariable UUID id) {
         TimesheetResponse response = timesheetService.approveTimesheet(id);
         return ResponseEntity.ok(ApiResponse.success("Timesheet approved successfully", response));
     }
 
     @PostMapping("/{id}/reject")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
-    @Operation(summary = "Reject submitted timesheet with reason (Manager/Admin only)")
+    @PreAuthorize("hasAnyRole('VENDOR', 'ADMIN')")
+    @Operation(summary = "Reject submitted timesheet with reason (Vendor/Admin)")
     public ResponseEntity<ApiResponse<TimesheetResponse>> rejectTimesheet(
             @PathVariable UUID id,
             @Valid @RequestBody TimesheetRejectRequest rejectRequest) {

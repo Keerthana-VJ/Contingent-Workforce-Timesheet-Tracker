@@ -13,7 +13,7 @@ public interface VendorService {
     VendorResponse createVendor(VendorRequest request);
     VendorResponse updateVendor(UUID id, VendorRequest request);
     VendorResponse getVendorById(UUID id);
-    PageResponse<VendorResponse> getVendors(String search, VendorStatus status, Pageable pageable);
+    PageResponse<VendorResponse> getVendors(UUID managerId, String search, VendorStatus status, Pageable pageable);
     List<VendorResponse> getAllVendorsList();
     void deleteVendor(UUID id);
 }

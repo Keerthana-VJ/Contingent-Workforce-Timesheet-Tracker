@@ -126,7 +126,11 @@ public class InvoiceServiceImpl implements InvoiceService {
         UUID effectiveVendorId = vendorId;
         if (SecurityUtils.isVendor()) {
             Vendor vendor = vendorRepository.findByEmail(SecurityUtils.getCurrentUserEmail()).orElse(null);
-            if (vendor != null) effectiveVendorId = vendor.getId();
+            if (vendor != null) {
+                effectiveVendorId = vendor.getId();
+            } else {
+                return PageResponse.empty();
+            }
         }
 
         Page<Invoice> page = invoiceRepository.findWithFilters(effectiveVendorId, projectId, status, startDate, endDate, pageable);

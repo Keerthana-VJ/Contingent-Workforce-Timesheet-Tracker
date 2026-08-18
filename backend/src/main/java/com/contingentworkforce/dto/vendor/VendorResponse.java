@@ -25,6 +25,9 @@ public class VendorResponse {
     private LocalDate contractEndDate;
     private VendorStatus status;
     private int contractorCount;
+    private UUID managerId;
+    private String managerName;
+    private String managerEmail;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

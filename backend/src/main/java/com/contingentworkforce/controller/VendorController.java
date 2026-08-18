@@ -31,11 +31,12 @@ public class VendorController {
     @GetMapping
     @Operation(summary = "Get paginated list of vendors with optional filtering")
     public ResponseEntity<ApiResponse<PageResponse<VendorResponse>>> getVendors(
+            @RequestParam(required = false) UUID managerId,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) VendorStatus status,
             @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         
-        PageResponse<VendorResponse> response = vendorService.getVendors(search, status, pageable);
+        PageResponse<VendorResponse> response = vendorService.getVendors(managerId, search, status, pageable);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

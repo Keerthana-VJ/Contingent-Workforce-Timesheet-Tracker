@@ -36,4 +36,5 @@ public class ContractorRequest {
     private LocalDate startDate;
     private LocalDate endDate;
     private ContractorStatus status;
+    private String password; // Optional login password for contractor user account
 }

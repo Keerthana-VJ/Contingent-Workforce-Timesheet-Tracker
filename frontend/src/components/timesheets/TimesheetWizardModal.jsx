@@ -3,7 +3,8 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import apiClient from '../../api/axios';
 import { getProjects, getMyProjects } from '../../api/projectApi';
-import { AlertCircle, Calendar, CheckCircle, Info } from 'lucide-react';
+import { getMilestones } from '../../api/milestoneApi';
+import { AlertCircle, Calendar, CheckCircle, Info, Flag, Award } from 'lucide-react';
 
 const getDatesBetween = (start, end) => {
     const dates = [];
@@ -53,6 +54,10 @@ export const TimesheetWizardModal = ({ isOpen, onClose, onSuccess }) => {
     const [projects, setProjects] = useState([]);
     const [loadingProjects, setLoadingProjects] = useState(true);
     const [selectedProjectId, setSelectedProjectId] = useState('');
+    const [projectMilestones, setProjectMilestones] = useState([]);
+    const [loadingMilestones, setLoadingMilestones] = useState(false);
+    const [selectedMilestoneId, setSelectedMilestoneId] = useState('');
+    const [markAccomplished, setMarkAccomplished] = useState(false);
     const [frequency, setFrequency] = useState('weekly');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -68,6 +73,8 @@ export const TimesheetWizardModal = ({ isOpen, onClose, onSuccess }) => {
             setFrequency('weekly');
             setShowCustomDate(false);
             setLoadingProjects(true);
+            setSelectedMilestoneId('');
+            setMarkAccomplished(false);
 
             const initialRange = getDefaultPeriod('weekly');
             setStartDate(initialRange.startStr);
@@ -108,6 +115,36 @@ export const TimesheetWizardModal = ({ isOpen, onClose, onSuccess }) => {
         }
     }, [isOpen]);
 
+    // Fetch milestones whenever selected project changes
+    useEffect(() => {
+        if (!selectedProjectId) {
+            setProjectMilestones([]);
+            setSelectedMilestoneId('');
+            return;
+        }
+        const fetchProjectMilestones = async () => {
+            setLoadingMilestones(true);
+            try {
+                const data = await getMilestones({ projectId: selectedProjectId });
+                const list = Array.isArray(data) ? data : (data?.content || data?.data || []);
+                const matching = list.filter(m => (m.projectId === selectedProjectId || m.project?.id === selectedProjectId));
+                setProjectMilestones(matching.length > 0 ? matching : list);
+                if (matching.length > 0) {
+                    const active = matching.find(m => m.status !== 'COMPLETED') || matching[0];
+                    setSelectedMilestoneId(active ? active.id : '');
+                } else {
+                    setSelectedMilestoneId('');
+                }
+            } catch (err) {
+                console.error("Failed to load project milestones", err);
+                setProjectMilestones([]);
+            } finally {
+                setLoadingMilestones(false);
+            }
+        };
+        fetchProjectMilestones();
+    }, [selectedProjectId]);
+
     const handleFrequencyChange = (newFreq) => {
         setFrequency(newFreq);
         const range = getDefaultPeriod(newFreq);
@@ -133,11 +170,12 @@ export const TimesheetWizardModal = ({ isOpen, onClose, onSuccess }) => {
                 date,
                 hours: isWeekend ? 0 : 8,
                 extraHours: 0,
-                milestones: ''
+                milestoneId: selectedMilestoneId || '',
+                tasks: ''
             };
         });
         setDayDetails(initialDetails);
-        setStep(2); // Directly go to day-wise hours
+        setStep(2);
     };
 
     const handleDetailChange = (index, field, value) => {
@@ -165,13 +203,17 @@ export const TimesheetWizardModal = ({ isOpen, onClose, onSuccess }) => {
                 const startTime = "09:00:00";
                 const endTime = calculateEndTime(startTime, totalHours);
 
+                const chosenMilestone = projectMilestones.find(m => m.id === (day.milestoneId || selectedMilestoneId));
+                const milestoneDesc = chosenMilestone ? `[Milestone: ${chosenMilestone.milestoneName}] ` : '';
+
                 const payload = {
                     projectId: selectedProjectId,
+                    milestoneId: day.milestoneId || selectedMilestoneId || null,
                     workDate: day.date,
                     startTime: startTime,
                     endTime: endTime,
                     breakHours: 0,
-                    description: day.milestones || `Regular work on ${day.date} (${totalHours} hrs)`
+                    description: `${milestoneDesc}${day.tasks || `Regular work on ${day.date} (${totalHours} hrs)`}`.trim()
                 };
 
                 const res = await apiClient.post('/timesheets', payload);
@@ -183,6 +225,15 @@ export const TimesheetWizardModal = ({ isOpen, onClose, onSuccess }) => {
                     } catch (submitErr) {
                         console.warn("Timesheet auto-submit notice:", submitErr);
                     }
+                }
+            }
+
+            // If contractor checked milestone accomplishment, mark milestone completed with 1 click
+            if (markAccomplished && selectedMilestoneId) {
+                try {
+                    await apiClient.post(`/milestones/${selectedMilestoneId}/complete`);
+                } catch (compErr) {
+                    console.warn("Milestone complete notice:", compErr);
                 }
             }
 
@@ -198,6 +249,7 @@ export const TimesheetWizardModal = ({ isOpen, onClose, onSuccess }) => {
     };
 
     const selectedProjectObj = projects.find(p => p.id === selectedProjectId);
+    const activeMilestoneObj = projectMilestones.find(m => m.id === selectedMilestoneId);
 
     const renderStep1 = () => (
         <div className="space-y-4">
@@ -233,6 +285,43 @@ export const TimesheetWizardModal = ({ isOpen, onClose, onSuccess }) => {
                                 </option>
                             ))}
                         </select>
+                    </div>
+
+                    {/* Milestone Reached / Associated Deliverable Selector */}
+                    <div>
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                                Target Milestone Reached / In-Progress Deliverable
+                            </label>
+                            {loadingMilestones && (
+                                <span className="text-[11px] text-slate-400">Loading milestones...</span>
+                            )}
+                        </div>
+                        <select
+                            value={selectedMilestoneId}
+                            onChange={(e) => setSelectedMilestoneId(e.target.value)}
+                            className="w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white px-3 py-2 border shadow-sm sm:text-sm focus:ring-primary-500 focus:border-primary-500"
+                        >
+                            <option value="">-- General Project Work (No Milestone Linked) --</option>
+                            {projectMilestones.map(m => (
+                                <option key={m.id} value={m.id}>
+                                    🚩 {m.milestoneName || m.name} ({m.completedDays || 0} of {m.assignedDays || 10} days completed - {m.completionPercentage || 0}%)
+                                </option>
+                            ))}
+                        </select>
+                        {activeMilestoneObj && (
+                            <div className="mt-2 p-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-900 dark:text-indigo-200 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Flag className="h-4 w-4 text-indigo-600 shrink-0" />
+                                    <span>
+                                        <strong>{activeMilestoneObj.milestoneName}</strong>: {activeMilestoneObj.completedDays || 0} of {activeMilestoneObj.assignedDays || 10} days completed ({activeMilestoneObj.completionPercentage || 0}%)
+                                    </span>
+                                </div>
+                                <span className="font-semibold text-indigo-700 dark:text-indigo-300">
+                                    Due: {activeMilestoneObj.dueDate || 'Ongoing'}
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="pt-1">
@@ -322,6 +411,7 @@ export const TimesheetWizardModal = ({ isOpen, onClose, onSuccess }) => {
                     </h4>
                     <p className="text-xs text-slate-500">
                         {startDate} to {endDate} ({dayDetails.length} days)
+                        {activeMilestoneObj && ` • Milestone: ${activeMilestoneObj.milestoneName}`}
                     </p>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => setStep(1)}>Change Project / Dates</Button>
@@ -359,18 +449,35 @@ export const TimesheetWizardModal = ({ isOpen, onClose, onSuccess }) => {
                             />
                         </div>
                         <div className="col-span-12 sm:col-span-5">
-                            <label className="block text-[11px] text-slate-500 mb-0.5">Tasks / Milestone Note</label>
+                            <label className="block text-[11px] text-slate-500 mb-0.5">Tasks / Deliverable Note</label>
                             <input 
                                 type="text" 
-                                placeholder="Feature development, bugfix, etc." 
-                                value={day.milestones} 
-                                onChange={(e) => handleDetailChange(idx, 'milestones', e.target.value)} 
+                                placeholder="e.g. Regular deliverables completion..." 
+                                value={day.tasks} 
+                                onChange={(e) => handleDetailChange(idx, 'tasks', e.target.value)} 
                                 className="w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white px-2.5 py-1 text-sm border focus:ring-primary-500" 
                             />
                         </div>
                     </div>
                 ))}
             </div>
+
+            {/* 1-Click Milestone Accomplishment Toggle */}
+            {selectedMilestoneId && activeMilestoneObj && (
+                <div className="flex items-center gap-2.5 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-200">
+                    <input 
+                        type="checkbox" 
+                        id="markAccomplished" 
+                        checked={markAccomplished} 
+                        onChange={(e) => setMarkAccomplished(e.target.checked)} 
+                        className="rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
+                    />
+                    <label htmlFor="markAccomplished" className="font-semibold cursor-pointer flex items-center gap-1.5">
+                        <Award className="h-4 w-4 text-emerald-600" />
+                        Mark milestone "{activeMilestoneObj.milestoneName}" as Accomplished & Ended with this submission
+                    </label>
+                </div>
+            )}
 
             <div className="flex justify-between pt-4 mt-2 border-t border-slate-200 dark:border-slate-700">
                 <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
@@ -383,7 +490,7 @@ export const TimesheetWizardModal = ({ isOpen, onClose, onSuccess }) => {
         <Modal 
             isOpen={isOpen} 
             onClose={onClose} 
-            title="Timesheet Submission" 
+            title="Timesheet & Milestone Submission" 
             className={step === 2 ? "max-w-3xl" : "max-w-lg"}
         >
             {step === 1 && renderStep1()}
@@ -391,4 +498,3 @@ export const TimesheetWizardModal = ({ isOpen, onClose, onSuccess }) => {
         </Modal>
     );
 };
-

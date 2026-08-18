@@ -9,6 +9,8 @@ import { getTimesheets, approveTimesheet, rejectTimesheet } from '../../api/time
 import { getInvoices, approveInvoice, rejectInvoice } from '../../api/invoiceApi';
 import { getMilestones } from '../../api/milestoneApi';
 import { getProjects } from '../../api/projectApi';
+import { getVendors } from '../../api/vendorApi';
+import { getContractors } from '../../api/contractorApi';
 import { 
   Clock, 
   Flag, 
@@ -19,7 +21,9 @@ import {
   Eye, 
   RefreshCw, 
   Info, 
-  AlertCircle
+  AlertCircle,
+  Building2,
+  Users
 } from 'lucide-react';
 
 export const ManagerDashboard = () => {
@@ -30,7 +34,9 @@ export const ManagerDashboard = () => {
     pendingInvoices: 0,
     pendingMilestones: 0,
     totalPendingAmount: 0,
-    activeProjects: 0
+    activeProjects: 0,
+    mappedVendors: 0,
+    supervisedContractors: 0
   });
   const [pendingQueue, setPendingQueue] = useState([]);
 
@@ -44,17 +50,21 @@ export const ManagerDashboard = () => {
 
   const fetchLiveManagerData = async () => {
     try {
-      const [timesheetsData, invoicesData, milestonesData, projectsData] = await Promise.all([
+      const [timesheetsData, invoicesData, milestonesData, projectsData, vendorsData, contractorsData] = await Promise.all([
         getTimesheets(),
         getInvoices(),
         getMilestones(),
-        getProjects()
+        getProjects(),
+        getVendors(),
+        getContractors()
       ]);
 
       const tsList = Array.isArray(timesheetsData) ? timesheetsData : (timesheetsData?.content || timesheetsData?.data?.content || timesheetsData?.data || []);
       const invList = Array.isArray(invoicesData) ? invoicesData : (invoicesData?.content || invoicesData?.data?.content || invoicesData?.data || []);
       const msList = Array.isArray(milestonesData) ? milestonesData : (milestonesData?.content || milestonesData?.data?.content || milestonesData?.data || []);
       const projList = Array.isArray(projectsData) ? projectsData : (projectsData?.content || projectsData?.data?.content || projectsData?.data || []);
+      const venList = Array.isArray(vendorsData) ? vendorsData : (vendorsData?.content || vendorsData?.data?.content || vendorsData?.data || []);
+      const conList = Array.isArray(contractorsData) ? contractorsData : (contractorsData?.content || contractorsData?.data?.content || contractorsData?.data || []);
 
       // Calculate Pending
       const pendingTs = tsList.filter(t => (t.status || '').toUpperCase() === 'SUBMITTED' || (t.status || '').toUpperCase() === 'REVIEW REQUIRED');
@@ -70,27 +80,19 @@ export const ManagerDashboard = () => {
         pendingInvoices: pendingInv.length,
         pendingMilestones: pendingMs.length,
         totalPendingAmount: invPendingSum + tsPendingEstSum,
-        activeProjects: projList.filter(p => (p.status || '').toUpperCase() === 'ACTIVE').length
+        activeProjects: projList.filter(p => (p.status || '').toUpperCase() === 'ACTIVE').length,
+        mappedVendors: venList.length,
+        supervisedContractors: conList.length
       });
 
-      // Construct Unified Pending Action Queue
+      // Construct Pending Vendor Invoices Action Queue for Manager
       const queue = [
-        ...pendingTs.map(t => ({
-          id: t.id,
-          type: 'Timesheet',
-          reference: `TS-${String(t.id).substring(0, 8).toUpperCase()}`,
-          submitter: t.contractor?.user?.name || t.contractorName || 'Contractor',
-          project: t.projectName || t.project?.projectName || 'Project',
-          amountOrHours: `${t.totalHours || 0} hrs`,
-          date: t.submittedDate || t.workDate || (t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'Today'),
-          raw: t
-        })),
         ...pendingInv.map(i => ({
           id: i.id,
           type: 'Invoice',
           reference: i.invoiceNumber || `INV-${String(i.id).substring(0, 8).toUpperCase()}`,
-          submitter: i.vendor?.vendorName || i.vendorName || 'Vendor',
-          project: i.projectName || i.project?.projectName || 'Project',
+          submitter: i.vendor?.vendorName || i.vendorName || 'Vendor Partner',
+          project: i.projectName || i.project?.projectName || 'Project Delivery',
           amountOrHours: `$${(Number(i.totalAmount) || 0).toLocaleString()}`,
           date: i.submittedDate || (i.submittedAt ? new Date(i.submittedAt).toLocaleDateString() : 'Today'),
           raw: i
@@ -294,7 +296,17 @@ export const ManagerDashboard = () => {
       </div>
 
       {/* Real-time Stat Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <StatCard 
+          title="Mapped Vendors" 
+          value={metrics.mappedVendors} 
+          icon={Building2} 
+        />
+        <StatCard 
+          title="Supervised Contractors" 
+          value={metrics.supervisedContractors} 
+          icon={Users} 
+        />
         <StatCard 
           title="Pending Timesheets" 
           value={metrics.pendingTimesheets} 
@@ -306,12 +318,12 @@ export const ManagerDashboard = () => {
           icon={FileText} 
         />
         <StatCard 
-          title="Milestones In Progress" 
-          value={metrics.pendingMilestones} 
+          title="Active Projects" 
+          value={metrics.activeProjects} 
           icon={Flag} 
         />
         <StatCard 
-          title="Pending Authorization Value" 
+          title="Pending Auth Value" 
           value={`$${metrics.totalPendingAmount.toLocaleString()}`} 
           icon={DollarSign} 
         />

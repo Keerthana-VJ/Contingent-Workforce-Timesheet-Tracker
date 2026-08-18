@@ -7,13 +7,31 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { FormInput } from '../../components/common/FormInput';
-import { Plus, Eye, Edit, Trash2, User, Building2, CheckCircle, AlertCircle, Phone, Mail, DollarSign, Calendar, Briefcase } from 'lucide-react';
+import { 
+  Plus, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  User, 
+  Building2, 
+  CheckCircle, 
+  AlertCircle, 
+  Phone, 
+  Mail, 
+  DollarSign, 
+  Calendar, 
+  Briefcase,
+  UserCheck,
+  ShieldCheck,
+  RefreshCw
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const ContractorsList = () => {
   const [contractors, setContractors] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { role, user } = useAuth();
 
@@ -42,14 +60,16 @@ export const ContractorsList = () => {
     hourlyRate: '',
     startDate: '',
     endDate: '',
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    password: 'Password123!'
   });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const fetchContractorsList = async () => {
-    setLoading(true);
+  const fetchContractorsList = async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    else setLoading(true);
     try {
       const [contractorsData, vendorsData] = await Promise.all([
         getContractors(),
@@ -64,6 +84,7 @@ export const ContractorsList = () => {
       setContractors([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -82,7 +103,8 @@ export const ContractorsList = () => {
       hourlyRate: '65',
       startDate: new Date().toISOString().split('T')[0],
       endDate: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().split('T')[0],
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      password: 'Password123!'
     });
     setFormError('');
     setIsAddModalOpen(true);
@@ -91,7 +113,7 @@ export const ContractorsList = () => {
   const handleCreateContractor = async (e) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.email.trim() || !formData.vendorId || !formData.jobRole.trim() || !formData.hourlyRate) {
-      setFormError('Please fill in all required fields (Name, Email, Vendor, Job Role, Rate).');
+      setFormError('Please fill in all required fields (Name, Email, Vendor Agency, Job Role, Rate).');
       return;
     }
     setSubmitting(true);
@@ -101,10 +123,10 @@ export const ContractorsList = () => {
         ...formData,
         hourlyRate: Number(formData.hourlyRate)
       });
-      setSuccessMsg('Contractor added successfully!');
+      setSuccessMsg('Contractor registered and mapped to Vendor successfully!');
       setTimeout(() => setSuccessMsg(''), 3000);
       setIsAddModalOpen(false);
-      fetchContractorsList();
+      fetchContractorsList(true);
     } catch (err) {
       setFormError(err.response?.data?.message || 'Failed to create contractor profile.');
     } finally {
@@ -136,8 +158,8 @@ export const ContractorsList = () => {
 
   const handleUpdateContractor = async (e) => {
     e.preventDefault();
-    if (!formData.jobRole.trim() || !formData.hourlyRate) {
-      setFormError('Job Role and Hourly Rate are required.');
+    if (!formData.name.trim() || !formData.email.trim() || !formData.jobRole.trim() || !formData.hourlyRate) {
+      setFormError('Name, Email, Job Role, and Hourly Rate are required.');
       return;
     }
     setSubmitting(true);
@@ -147,10 +169,10 @@ export const ContractorsList = () => {
         ...formData,
         hourlyRate: Number(formData.hourlyRate)
       });
-      setSuccessMsg('Contractor updated successfully!');
+      setSuccessMsg('Contractor profile updated successfully!');
       setTimeout(() => setSuccessMsg(''), 3000);
       setIsEditModalOpen(false);
-      fetchContractorsList();
+      fetchContractorsList(true);
     } catch (err) {
       setFormError(err.response?.data?.message || 'Failed to update contractor.');
     } finally {
@@ -168,10 +190,10 @@ export const ContractorsList = () => {
     setSubmitting(true);
     try {
       await deleteContractor(selectedContractor.id);
-      setSuccessMsg('Contractor profile deleted successfully.');
+      setSuccessMsg('Contractor removed successfully.');
       setTimeout(() => setSuccessMsg(''), 3000);
       setIsDeleteModalOpen(false);
-      fetchContractorsList();
+      fetchContractorsList(true);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to delete contractor.');
     } finally {
@@ -183,9 +205,10 @@ export const ContractorsList = () => {
     const name = (c.user?.name || c.name || '').toLowerCase();
     const email = (c.user?.email || c.email || '').toLowerCase();
     const roleName = (c.jobRole || '').toLowerCase();
-    const vendorName = (c.vendor?.vendorName || c.vendorName || '').toLowerCase();
+    const vName = (c.vendor?.vendorName || c.vendorName || '').toLowerCase();
+    const mgrName = (c.vendor?.managerName || '').toLowerCase();
     const query = searchTerm.toLowerCase();
-    return name.includes(query) || email.includes(query) || roleName.includes(query) || vendorName.includes(query);
+    return name.includes(query) || email.includes(query) || roleName.includes(query) || vName.includes(query) || mgrName.includes(query);
   });
 
   const columns = [
@@ -193,14 +216,14 @@ export const ContractorsList = () => {
       header: 'Contractor Name', 
       cell: (row) => (
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 font-semibold text-xs shrink-0">
-            <User className="h-4 w-4" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 font-semibold text-xs shrink-0">
+            <User className="h-4.5 w-4.5" />
           </div>
           <div>
-            <span className="font-semibold text-slate-900 dark:text-white block leading-tight">
+            <span className="font-bold text-slate-900 dark:text-white block text-xs leading-tight">
               {row.user?.name || row.name || 'Contractor'}
             </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 block mt-0.5">
               {row.user?.email || row.email || (row.id ? String(row.id).substring(0, 8) : '')}
             </span>
           </div>
@@ -210,19 +233,31 @@ export const ContractorsList = () => {
     { 
       header: 'Vendor Agency', 
       cell: (row) => (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-          {row.vendor?.vendorName || row.vendorName || 'Unassigned'}
+        <div className="flex flex-col gap-0.5">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+            <Building2 className="h-3 w-3" />
+            {row.vendor?.vendorName || row.vendorName || 'Unassigned'}
+          </span>
+        </div>
+      )
+    },
+    { 
+      header: 'Assigned Manager', 
+      cell: (row) => (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+          <UserCheck className="h-3 w-3 text-indigo-500" />
+          {row.vendor?.managerName || 'Unassigned'}
         </span>
       )
     },
     { 
       header: 'Job Role', 
-      cell: (row) => <span className="font-medium text-slate-800 dark:text-slate-200">{row.jobRole || row.role || '-'}</span>
+      cell: (row) => <span className="font-medium text-xs text-slate-800 dark:text-slate-200">{row.jobRole || row.role || '-'}</span>
     },
     { 
       header: 'Hourly Rate', 
       cell: (row) => (
-        <span className="font-semibold text-slate-900 dark:text-white">
+        <span className="font-bold text-xs text-slate-900 dark:text-white">
           ${Number(row.hourlyRate || 0).toLocaleString()}/hr
         </span>
       ) 
@@ -231,11 +266,11 @@ export const ContractorsList = () => {
     { 
       header: 'Actions', 
       cell: (row) => (
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-1.5">
           <button 
             onClick={() => openViewModal(row)}
             className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-primary-600 dark:hover:bg-slate-800 transition-colors"
-            title="View Details"
+            title="View Details & Mapping"
           >
             <Eye className="h-4 w-4" />
           </button>
@@ -269,45 +304,78 @@ export const ContractorsList = () => {
   return (
     <div className="space-y-6">
       {successMsg && (
-        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-4 text-sm font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 p-4 text-sm font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 animate-in fade-in duration-200">
           <CheckCircle className="h-4 w-4" />
           {successMsg}
         </div>
       )}
 
+      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Contractors
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Manage external talent profiles, billing rates, and vendor affiliations.
+            Manage external talent profiles, billing rates, vendor affiliations, and supervisory hierarchy.
           </p>
         </div>
-        {(role === 'ADMIN' || role === 'MANAGER' || role === 'VENDOR') && (
-          <Button onClick={openAddModal} className="flex items-center gap-1.5 self-start sm:self-auto shadow-sm">
-            <Plus className="h-4 w-4" />
-            Add Contractor
+
+        <div className="flex items-center gap-2.5">
+          <Button 
+            variant="outline" 
+            onClick={() => fetchContractorsList(true)} 
+            isLoading={refreshing}
+            className="flex items-center gap-1.5 text-xs"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Refresh
           </Button>
-        )}
+
+          {(role === 'ADMIN' || role === 'MANAGER' || role === 'VENDOR') && (
+            <Button onClick={openAddModal} className="flex items-center gap-1.5 self-start sm:self-auto shadow-sm text-xs">
+              <Plus className="h-4 w-4" />
+              Add Contractor
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Hierarchy Info Banner */}
+      <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4 dark:border-blue-900/50 dark:bg-blue-950/30 flex items-start gap-3 text-xs text-blue-900 dark:text-blue-200">
+        <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+        <div>
+          <strong className="block mb-0.5">Two-Tier Governance Hierarchy:</strong>
+          <span>
+            <strong>Contractor</strong> is mapped to a partner <strong>Vendor Agency</strong>, which is supervised by an enterprise <strong>Project Manager</strong>.
+          </span>
+        </div>
       </div>
       
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-          <div className="relative w-full max-w-sm">
-            <input 
-              type="text" 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search contractors by name, role, or vendor..." 
-              className="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" 
-            />
-          </div>
-          <span className="text-xs text-slate-500 dark:text-slate-400">
-            {filteredContractors.length} contractor{filteredContractors.length === 1 ? '' : 's'}
+        <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+            Active Workforce ({contractors.length})
           </span>
+          <input 
+            type="text" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search contractor, vendor agency, or manager..." 
+            className="h-8.5 w-80 rounded-lg border border-slate-300 bg-white px-3 text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100" 
+          />
         </div>
-        <DataTable columns={columns} data={filteredContractors} keyField="id" />
+        {filteredContractors.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 text-center">
+            <User className="h-10 w-10 text-slate-300 dark:text-slate-600 mb-2" />
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">No contractors found</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Add contractors and map them to active vendor agencies to begin managing timesheets.
+            </p>
+          </div>
+        ) : (
+          <DataTable columns={columns} data={filteredContractors} keyField="id" />
+        )}
       </div>
 
       {/* Add Contractor Modal */}
@@ -326,14 +394,14 @@ export const ContractorsList = () => {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormInput
-              label="Full Name"
+              label="Full Name *"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="e.g. John Doe"
               required
             />
             <FormInput
-              label="Email Address"
+              label="Email Address *"
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -351,43 +419,43 @@ export const ContractorsList = () => {
             />
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Vendor Company <span className="text-red-500">*</span>
+                Vendor Agency <span className="text-red-500">*</span>
               </label>
               {role === 'VENDOR' ? (
                 <div className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 px-3 py-2 text-sm font-medium">
-                  {myVendor ? (myVendor.vendorName || myVendor.name) : 'Apex Global Technologies'}
+                  {myVendor ? (myVendor.vendorName || myVendor.name) : 'Your Agency'}
                 </div>
               ) : (
                 <select
                   value={formData.vendorId}
                   onChange={(e) => setFormData({ ...formData, vendorId: e.target.value })}
-                  className="w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white px-3 py-2 border shadow-sm sm:text-sm focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white px-3 py-2 border shadow-sm sm:text-sm focus:ring-primary-500 focus:border-primary-500 font-medium"
                   required
                 >
-                  {vendors.length === 0 ? (
-                    <option value="">No vendors available</option>
-                  ) : (
-                    vendors.map(v => (
-                      <option key={v.id} value={v.id}>
-                        {v.vendorName || v.name}
-                      </option>
-                    ))
-                  )}
+                  <option value="">-- Select Vendor Agency --</option>
+                  {vendors.map(v => (
+                    <option key={v.id} value={v.id}>
+                      {v.vendorName || v.name} {v.managerName ? `(Manager: ${v.managerName})` : ''}
+                    </option>
+                  ))}
                 </select>
               )}
+              <p className="text-[11px] text-slate-500 mt-1">
+                Every contractor must be mapped to an authorized vendor partner.
+              </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormInput
-              label="Job Role"
+              label="Job Role *"
               value={formData.jobRole}
               onChange={(e) => setFormData({ ...formData, jobRole: e.target.value })}
               placeholder="e.g. Senior Full Stack Engineer"
               required
             />
             <FormInput
-              label="Hourly Rate ($/hr)"
+              label="Hourly Rate ($/hr) *"
               type="number"
               value={formData.hourlyRate}
               onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
@@ -423,6 +491,15 @@ export const ContractorsList = () => {
             </div>
           </div>
 
+          <FormInput
+            label="Contractor Portal Login Password"
+            type="password"
+            value={formData.password || ''}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            placeholder="e.g. Password123!"
+            helperText="User credentials will be created in the database so the contractor can log in directly."
+          />
+
           <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200 dark:border-slate-800">
             <Button type="button" variant="outline" onClick={() => setIsAddModalOpen(false)}>
               Cancel
@@ -449,15 +526,17 @@ export const ContractorsList = () => {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Vendor</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Mapped Vendor Agency
+            </label>
             <select
               value={formData.vendorId}
               onChange={(e) => setFormData({ ...formData, vendorId: e.target.value })}
-              className="w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white px-3 py-2 border shadow-sm sm:text-sm focus:ring-primary-500 focus:border-primary-500"
+              className="w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white px-3 py-2 border shadow-sm sm:text-sm focus:ring-primary-500 focus:border-primary-500 font-medium"
             >
               {vendors.map(v => (
                 <option key={v.id} value={v.id}>
-                  {v.vendorName || v.name}
+                  {v.vendorName || v.name} {v.managerName ? `(Manager: ${v.managerName})` : ''}
                 </option>
               ))}
             </select>
@@ -521,7 +600,7 @@ export const ContractorsList = () => {
       <Modal
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
-        title="Contractor Profile"
+        title="Contractor Governance Profile"
       >
         {selectedContractor && (
           <div className="space-y-4 py-2 text-sm">
@@ -529,35 +608,51 @@ export const ContractorsList = () => {
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-lg">
                 <User className="h-6 w-6" />
               </div>
-              <div>
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                  {selectedContractor.user?.name || selectedContractor.name}
-                </h3>
-                <div className="flex items-center gap-2 mt-1">
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">
+                    {selectedContractor.user?.name || selectedContractor.name}
+                  </h3>
                   <StatusBadge status={selectedContractor.status || 'ACTIVE'} />
-                  <span className="text-xs font-semibold text-primary-600 dark:text-primary-400">
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                     ${Number(selectedContractor.hourlyRate || 0).toLocaleString()}/hr
                   </span>
+                  <span className="text-xs text-slate-400">•</span>
+                  <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                    {selectedContractor.jobRole || 'Contractor'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Complete Hierarchy Card */}
+            <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3.5 dark:border-blue-900/50 dark:bg-blue-950/30 space-y-2">
+              <span className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider block">
+                Two-Tier Mapping Chain
+              </span>
+              <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-white bg-white dark:bg-slate-800 px-2.5 py-1.5 rounded-lg border border-blue-200 dark:border-slate-700 shadow-xs">
+                  <Building2 className="h-4 w-4 text-blue-600" />
+                  <span>Vendor: {selectedContractor.vendor?.vendorName || selectedContractor.vendorName || 'N/A'}</span>
+                </div>
+                <span className="text-blue-500 font-bold">➔</span>
+                <div className="flex items-center gap-1.5 font-semibold text-indigo-900 dark:text-indigo-200 bg-indigo-100/70 dark:bg-indigo-950/60 px-2.5 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 shadow-xs">
+                  <UserCheck className="h-4 w-4 text-indigo-600" />
+                  <span>Manager: {selectedContractor.vendor?.managerName || 'Unassigned'}</span>
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className="rounded-lg border border-slate-200 dark:border-slate-700/80 p-3 space-y-1">
-                <span className="text-slate-500 flex items-center gap-1 font-medium"><Mail className="h-3.5 w-3.5" /> Email</span>
+                <span className="text-slate-500 flex items-center gap-1 font-medium"><Mail className="h-3.5 w-3.5" /> Email Address</span>
                 <span className="font-semibold text-slate-900 dark:text-white text-sm">{selectedContractor.user?.email || selectedContractor.email || 'N/A'}</span>
               </div>
               <div className="rounded-lg border border-slate-200 dark:border-slate-700/80 p-3 space-y-1">
-                <span className="text-slate-500 flex items-center gap-1 font-medium"><Phone className="h-3.5 w-3.5" /> Phone</span>
+                <span className="text-slate-500 flex items-center gap-1 font-medium"><Phone className="h-3.5 w-3.5" /> Phone Number</span>
                 <span className="font-semibold text-slate-900 dark:text-white text-sm">{selectedContractor.user?.phone || selectedContractor.phone || 'N/A'}</span>
-              </div>
-              <div className="rounded-lg border border-slate-200 dark:border-slate-700/80 p-3 space-y-1">
-                <span className="text-slate-500 flex items-center gap-1 font-medium"><Briefcase className="h-3.5 w-3.5" /> Job Role</span>
-                <span className="font-semibold text-slate-900 dark:text-white text-sm">{selectedContractor.jobRole || '-'}</span>
-              </div>
-              <div className="rounded-lg border border-slate-200 dark:border-slate-700/80 p-3 space-y-1">
-                <span className="text-slate-500 flex items-center gap-1 font-medium"><Building2 className="h-3.5 w-3.5" /> Vendor</span>
-                <span className="font-semibold text-slate-900 dark:text-white text-sm">{selectedContractor.vendor?.vendorName || selectedContractor.vendorName || 'N/A'}</span>
               </div>
               <div className="rounded-lg border border-slate-200 dark:border-slate-700/80 p-3 space-y-1">
                 <span className="text-slate-500 flex items-center gap-1 font-medium"><Calendar className="h-3.5 w-3.5" /> Start Date</span>
@@ -565,7 +660,7 @@ export const ContractorsList = () => {
               </div>
               <div className="rounded-lg border border-slate-200 dark:border-slate-700/80 p-3 space-y-1">
                 <span className="text-slate-500 flex items-center gap-1 font-medium"><Calendar className="h-3.5 w-3.5" /> End Date</span>
-                <span className="font-semibold text-slate-900 dark:text-white text-sm">{selectedContractor.endDate || 'N/A'}</span>
+                <span className="font-semibold text-slate-900 dark:text-white text-sm">{selectedContractor.endDate || 'Ongoing'}</span>
               </div>
             </div>
 

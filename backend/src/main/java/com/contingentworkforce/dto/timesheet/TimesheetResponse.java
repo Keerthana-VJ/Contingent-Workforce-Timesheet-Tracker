@@ -23,6 +23,8 @@ public class TimesheetResponse {
     private ContractorResponse contractor;
     private UUID projectId;
     private String projectName;
+    private UUID milestoneId;
+    private String milestoneName;
     private LocalDate workDate;
     private LocalTime startTime;
     private LocalTime endTime;

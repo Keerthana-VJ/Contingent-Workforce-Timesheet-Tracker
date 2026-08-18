@@ -26,6 +26,14 @@ public interface TimesheetRepository extends JpaRepository<Timesheet, UUID>, Jpa
 
        List<Timesheet> findByContractorIdAndWorkDateBetween(UUID contractorId, LocalDate start, LocalDate end);
 
+       List<Timesheet> findByMilestoneId(UUID milestoneId);
+
+       @Query("SELECT COUNT(DISTINCT t.workDate) FROM Timesheet t WHERE t.milestone.id = :milestoneId AND t.status != 'REJECTED'")
+       Long countDistinctWorkDaysByMilestoneId(@Param("milestoneId") UUID milestoneId);
+
+       @Query("SELECT COALESCE(SUM(t.totalHours), 0) FROM Timesheet t WHERE t.milestone.id = :milestoneId AND t.status != 'REJECTED'")
+       Double sumTotalHoursByMilestoneId(@Param("milestoneId") UUID milestoneId);
+
        long countByStatus(TimesheetStatus status);
 
        @Query("SELECT SUM(t.totalHours) FROM Timesheet t WHERE t.contractor.id = :contractorId AND t.workDate = :workDate AND t.status != 'REJECTED'")

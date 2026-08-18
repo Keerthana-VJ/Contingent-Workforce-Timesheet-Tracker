@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -28,4 +29,6 @@ public class VendorRequest {
     private LocalDate contractStartDate;
     private LocalDate contractEndDate;
     private VendorStatus status;
+    private UUID managerId; // Assigned Manager for this Vendor
+    private String password; // Optional login password for vendor user account
 }

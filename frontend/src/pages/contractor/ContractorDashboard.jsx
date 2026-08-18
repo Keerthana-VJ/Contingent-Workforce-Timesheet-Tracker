@@ -4,7 +4,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Button } from '../../components/common/Button';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { getTimesheets } from '../../api/timesheetApi';
-import { getProjects } from '../../api/projectApi';
+import { getMyProjects } from '../../api/projectApi';
 import { getMilestones } from '../../api/milestoneApi';
 import { Briefcase, Clock, FileText, CheckCircle, Flag, Plus, ArrowRight, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -26,7 +26,7 @@ export const ContractorDashboard = () => {
     try {
       const [timesheetsData, projectsData, milestonesData] = await Promise.all([
         getTimesheets(),
-        getProjects(),
+        getMyProjects(),
         getMilestones()
       ]);
 
@@ -43,7 +43,7 @@ export const ContractorDashboard = () => {
 
       setMetrics({
         assignedProjects: pList.length,
-        currentMonthHours: totalHours > 0 ? totalHours : 40,
+        currentMonthHours: totalHours,
         pendingTimesheets: pendingCount,
         approvedTimesheets: approvedCount,
         upcomingMilestones: activeMs

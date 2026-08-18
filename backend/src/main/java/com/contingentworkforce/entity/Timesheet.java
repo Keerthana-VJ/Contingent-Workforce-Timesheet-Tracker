@@ -33,6 +33,10 @@ public class Timesheet {
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "milestone_id")
+    private Milestone milestone;
+
     @Column(name = "work_date", nullable = false)
     private LocalDate workDate;
 

@@ -107,6 +107,7 @@ public class DataInitializer implements CommandLineRunner {
                 .contractStartDate(LocalDate.of(2025, 1, 1))
                 .contractEndDate(LocalDate.of(2027, 12, 31))
                 .status(VendorStatus.ACTIVE)
+                .manager(manager)
                 .build();
         vendorRepository.save(vendor1);
 
@@ -119,6 +120,7 @@ public class DataInitializer implements CommandLineRunner {
                 .contractStartDate(LocalDate.of(2025, 3, 1))
                 .contractEndDate(LocalDate.of(2027, 3, 1))
                 .status(VendorStatus.ACTIVE)
+                .manager(manager)
                 .build();
         vendorRepository.save(vendor2);
 
@@ -192,10 +194,55 @@ public class DataInitializer implements CommandLineRunner {
         projectMemberRepository.save(member2);
 
 
-        // 6. Create Timesheets
+        // 6. Create Milestones
+        Milestone m1 = Milestone.builder()
+                .project(project1)
+                .milestoneName("Cloud Architecture Blueprint")
+                .description("Comprehensive architecture sign-off for AWS landing zone")
+                .startDate(LocalDate.now().minusMonths(2))
+                .dueDate(LocalDate.now().minusMonths(1))
+                .assignedDays(15)
+                .billingAmount(BigDecimal.valueOf(45000.00))
+                .completionPercentage(100)
+                .status(MilestoneStatus.COMPLETED)
+                .approvedBy(manager)
+                .approvedAt(LocalDateTime.now().minusMonths(1))
+                .build();
+        milestoneRepository.save(m1);
+
+        Milestone m2 = Milestone.builder()
+                .project(project1)
+                .milestoneName("Core Data Services Migration")
+                .description("Database migration of 10M records with zero downtime")
+                .startDate(LocalDate.now().minusMonths(1))
+                .dueDate(LocalDate.now().plusMonths(1))
+                .assignedDays(20)
+                .billingAmount(BigDecimal.valueOf(75000.00))
+                .completionPercentage(100)
+                .status(MilestoneStatus.COMPLETED)
+                .approvedBy(manager)
+                .approvedAt(LocalDateTime.now().minusDays(5))
+                .build();
+        milestoneRepository.save(m2);
+
+        Milestone m3 = Milestone.builder()
+                .project(project1)
+                .milestoneName("Microservices API Gateway")
+                .description("Unified Spring Cloud gateway with rate limiting")
+                .startDate(LocalDate.now().minusDays(10))
+                .dueDate(LocalDate.now().plusDays(10))
+                .assignedDays(10)
+                .billingAmount(BigDecimal.valueOf(50000.00))
+                .completionPercentage(0)
+                .status(MilestoneStatus.IN_PROGRESS)
+                .build();
+        milestoneRepository.save(m3);
+
+        // 7. Create Timesheets
         Timesheet ts1 = Timesheet.builder()
                 .contractor(contractor1)
                 .project(project1)
+                .milestone(m3)
                 .workDate(LocalDate.now().minusDays(2))
                 .startTime(LocalTime.of(9, 0))
                 .endTime(LocalTime.of(18, 0))
@@ -212,6 +259,7 @@ public class DataInitializer implements CommandLineRunner {
         Timesheet ts2 = Timesheet.builder()
                 .contractor(contractor1)
                 .project(project1)
+                .milestone(m3)
                 .workDate(LocalDate.now().minusDays(1))
                 .startTime(LocalTime.of(9, 0))
                 .endTime(LocalTime.of(17, 30))
@@ -228,6 +276,7 @@ public class DataInitializer implements CommandLineRunner {
         Timesheet ts3 = Timesheet.builder()
                 .contractor(contractor1)
                 .project(project1)
+                .milestone(m3)
                 .workDate(LocalDate.now())
                 .startTime(LocalTime.of(9, 30))
                 .endTime(LocalTime.of(18, 30))
@@ -238,44 +287,6 @@ public class DataInitializer implements CommandLineRunner {
                 .submittedAt(LocalDateTime.now())
                 .build();
         timesheetRepository.save(ts3);
-
-        // 7. Create Milestones
-        Milestone m1 = Milestone.builder()
-                .project(project1)
-                .milestoneName("Cloud Architecture Blueprint")
-                .description("Comprehensive architecture sign-off for AWS landing zone")
-                .dueDate(LocalDate.now().minusMonths(1))
-                .billingAmount(BigDecimal.valueOf(45000.00))
-                .completionPercentage(100)
-                .status(MilestoneStatus.COMPLETED)
-                .approvedBy(manager)
-                .approvedAt(LocalDateTime.now().minusMonths(1))
-                .build();
-        milestoneRepository.save(m1);
-
-        Milestone m2 = Milestone.builder()
-                .project(project1)
-                .milestoneName("Core Data Services Migration")
-                .description("Database migration of 10M records with zero downtime")
-                .dueDate(LocalDate.now().plusMonths(1))
-                .billingAmount(BigDecimal.valueOf(75000.00))
-                .completionPercentage(100)
-                .status(MilestoneStatus.COMPLETED)
-                .approvedBy(manager)
-                .approvedAt(LocalDateTime.now().minusDays(5))
-                .build();
-        milestoneRepository.save(m2);
-
-        Milestone m3 = Milestone.builder()
-                .project(project1)
-                .milestoneName("Microservices API Gateway")
-                .description("Unified Spring Cloud gateway with rate limiting")
-                .dueDate(LocalDate.now().plusMonths(2))
-                .billingAmount(BigDecimal.valueOf(50000.00))
-                .completionPercentage(60)
-                .status(MilestoneStatus.IN_PROGRESS)
-                .build();
-        milestoneRepository.save(m3);
 
         // 8. Create Invoices
         Invoice inv1 = Invoice.builder()
