@@ -1,6 +1,7 @@
 package com.contingentworkforce.dto.notification;
 
 import com.contingentworkforce.enums.NotificationType;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,6 +20,9 @@ public class NotificationResponse {
     private String title;
     private String message;
     private NotificationType type;
+
+    @JsonProperty("isRead")
     private boolean isRead;
+
     private LocalDateTime createdAt;
 }
