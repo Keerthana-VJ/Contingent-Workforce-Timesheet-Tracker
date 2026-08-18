@@ -71,15 +71,24 @@ public class ContractorServiceImpl implements ContractorService {
             throw new DuplicateResourceException("A contractor profile already exists for user: " + user.getEmail());
         }
 
-        Vendor vendor = vendorRepository.findById(request.getVendorId())
-                .orElseThrow(() -> new ResourceNotFoundException("Vendor not found with id: " + request.getVendorId()));
-
-        // Check if vendor user is creating contractor for their own vendor
+        Vendor vendor;
         if (SecurityUtils.isVendor()) {
             String currentUserEmail = SecurityUtils.getCurrentUserEmail();
-            if (vendor.getEmail() != null && !vendor.getEmail().equalsIgnoreCase(currentUserEmail)) {
-                throw new AccessDeniedException("Vendors can only create contractors under their own company");
+            Vendor currentVendor = vendorRepository.findByEmail(currentUserEmail).orElse(null);
+            if (currentVendor != null) {
+                vendor = currentVendor;
+            } else if (request.getVendorId() != null) {
+                vendor = vendorRepository.findById(request.getVendorId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Vendor not found with id: " + request.getVendorId()));
+            } else {
+                throw new ResourceNotFoundException("Vendor profile not found for logged-in user: " + currentUserEmail);
             }
+        } else {
+            if (request.getVendorId() == null) {
+                throw new IllegalArgumentException("Vendor ID is required");
+            }
+            vendor = vendorRepository.findById(request.getVendorId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Vendor not found with id: " + request.getVendorId()));
         }
 
         Contractor contractor = Contractor.builder()

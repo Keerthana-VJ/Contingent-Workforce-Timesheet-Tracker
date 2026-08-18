@@ -360,21 +360,66 @@ public class DataInitializer implements CommandLineRunner {
         // 11. Notifications
         Notification notif1 = Notification.builder()
                 .user(manager)
-                .title("Invoice Discrepancy Alert")
-                .message("Invoice INV-2026-002 submitted by Apex Global Technologies has a difference of 14,650.00.")
+                .title("Invoice Discrepancy Flagged")
+                .message("Invoice INV-2026-002 from Apex Global Technologies has an automated variance of $14,650.00 requiring manual review.")
                 .type(NotificationType.INVOICE)
                 .isRead(false)
                 .build();
         notificationRepository.save(notif1);
 
         Notification notif2 = Notification.builder()
-                .user(contractorUser1)
-                .title("Timesheet Approved")
-                .message("Your timesheet has been approved by Michael Manager.")
+                .user(manager)
+                .title("New Timesheets Pending Approval")
+                .message("3 timesheets submitted by John Contractor and Sarah DevOps are waiting for your review.")
                 .type(NotificationType.TIMESHEET)
-                .isRead(true)
+                .isRead(false)
                 .build();
         notificationRepository.save(notif2);
+
+        Notification notif3 = Notification.builder()
+                .user(contractorUser1)
+                .title("Timesheet Approved")
+                .message("Your timesheet for Enterprise Cloud Migration (Sprint 12) was approved by Michael Manager.")
+                .type(NotificationType.TIMESHEET)
+                .isRead(false)
+                .build();
+        notificationRepository.save(notif3);
+
+        Notification notif4 = Notification.builder()
+                .user(contractorUser1)
+                .title("Milestone Due Soon")
+                .message("Project milestone 'Database Migration & Validation' is scheduled for completion next week.")
+                .type(NotificationType.MILESTONE)
+                .isRead(true)
+                .build();
+        notificationRepository.save(notif4);
+
+        Notification notif5 = Notification.builder()
+                .user(vendorUser)
+                .title("Invoice Payment Processed")
+                .message("Invoice INV-2026-001 ($185,000.00) has been approved and marked as PAID.")
+                .type(NotificationType.INVOICE)
+                .isRead(false)
+                .build();
+        notificationRepository.save(notif5);
+
+        Notification notif6 = Notification.builder()
+                .user(vendorUser)
+                .title("Contractor Profile Active")
+                .message("John Contractor is currently allocated to Enterprise Cloud Migration under active billing.")
+                .type(NotificationType.SYSTEM)
+                .isRead(true)
+                .build();
+        notificationRepository.save(notif6);
+
+        Notification notif7 = Notification.builder()
+                .user(admin)
+                .title("System Audit Completed")
+                .message("Monthly workforce reconciliation successfully processed with 2 active vendor contracts.")
+                .type(NotificationType.SYSTEM)
+                .isRead(false)
+                .build();
+        notificationRepository.save(notif7);
 
         log.info("Demo database seeding complete! 5 users, 2 vendors, 2 projects, timesheets, milestones, and invoices are ready.");
     }

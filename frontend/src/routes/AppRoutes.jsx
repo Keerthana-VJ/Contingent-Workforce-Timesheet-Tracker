@@ -25,7 +25,7 @@ import { ContractorDashboard } from '../pages/contractor/ContractorDashboard';
 import { ManagerDashboard } from '../pages/manager/ManagerDashboard';
 import { ReportsDashboard } from '../pages/reports/ReportsDashboard';
 
-const NotificationsPlaceholder = () => <div className="p-6 text-slate-800 dark:text-white font-medium">Notifications Placeholder</div>;
+import { NotificationsPage } from '../pages/notifications/NotificationsPage';
 
 export const AppRoutes = () => {
   const { isAuthenticated, role } = useAuth();
@@ -79,7 +79,7 @@ export const AppRoutes = () => {
 
       {/* Common Notifications Route inside DashboardLayout */}
       <Route element={<DashboardLayout />}>
-        <Route path="/notifications" element={<NotificationsPlaceholder />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
       </Route>
 
       {/* Contractor Routes */}

@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { getPendingApprovals, approveApprovalItem, rejectApprovalItem } from '../../api/approvalApi';
+import { getAllApprovals, approveApprovalItem, rejectApprovalItem } from '../../api/approvalApi';
 import { DataTable } from '../../components/common/DataTable';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { FormInput } from '../../components/common/FormInput';
-import { CheckCircle, XCircle, Eye, Clock, AlertCircle, FileText, Calendar, DollarSign, User, Briefcase } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, AlertCircle, FileText, Calendar, DollarSign, User, Briefcase, History, CheckCheck, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const ApprovalsCenter = () => {
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('All');
+  const [statusTab, setStatusTab] = useState('PENDING'); // PENDING | APPROVED | REJECTED | ALL
+  const [typeFilter, setTypeFilter] = useState('ALL'); // ALL | Timesheet | Invoice
+  const [searchTerm, setSearchTerm] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackType, setFeedbackType] = useState('success');
@@ -31,7 +33,7 @@ export const ApprovalsCenter = () => {
   const fetchApprovalsList = async () => {
     setLoading(true);
     try {
-      const data = await getPendingApprovals();
+      const data = await getAllApprovals();
       setApprovals(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch approvals", error);
@@ -46,8 +48,8 @@ export const ApprovalsCenter = () => {
     try {
       await approveApprovalItem(approval);
       setFeedbackType('success');
-      setFeedbackMsg(`Successfully approved ${approval.type} (${approval.reference || approval.id})`);
-      setTimeout(() => setFeedbackMsg(''), 3500);
+      setFeedbackMsg(`Successfully approved ${approval.type} (${approval.reference || approval.id}). Moved to Approved history.`);
+      setTimeout(() => setFeedbackMsg(''), 4000);
       fetchApprovalsList();
     } catch (err) {
       console.error("Approval error", err);
@@ -76,8 +78,8 @@ export const ApprovalsCenter = () => {
     try {
       await rejectApprovalItem(selectedApproval, rejectReason);
       setFeedbackType('success');
-      setFeedbackMsg(`Rejected ${selectedApproval.type} (${selectedApproval.reference || selectedApproval.id}) with reason recorded.`);
-      setTimeout(() => setFeedbackMsg(''), 3500);
+      setFeedbackMsg(`Rejected ${selectedApproval.type} (${selectedApproval.reference || selectedApproval.id}). Moved to Rejected history.`);
+      setTimeout(() => setFeedbackMsg(''), 4000);
       setIsRejectModalOpen(false);
       fetchApprovalsList();
     } catch (err) {
@@ -90,9 +92,30 @@ export const ApprovalsCenter = () => {
     }
   };
 
-  const filteredApprovals = activeTab === 'All' 
-    ? approvals 
-    : approvals.filter(a => a.type.toLowerCase() === activeTab.toLowerCase());
+  // Counts for status tabs
+  const pendingCount = approvals.filter(a => a.status === 'PENDING').length;
+  const approvedCount = approvals.filter(a => a.status === 'APPROVED').length;
+  const rejectedCount = approvals.filter(a => a.status === 'REJECTED').length;
+
+  const filteredApprovals = approvals.filter(a => {
+    // Status filter
+    if (statusTab !== 'ALL' && a.status !== statusTab) {
+      return false;
+    }
+    // Type filter
+    if (typeFilter !== 'ALL' && a.type.toLowerCase() !== typeFilter.toLowerCase()) {
+      return false;
+    }
+    // Search query
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      const ref = (a.reference || '').toLowerCase();
+      const submitter = (a.submittedBy || '').toLowerCase();
+      const proj = (a.project || '').toLowerCase();
+      return ref.includes(q) || submitter.includes(q) || proj.includes(q);
+    }
+    return true;
+  });
 
   const columns = [
     { 
@@ -108,7 +131,7 @@ export const ApprovalsCenter = () => {
       )
     },
     { 
-      header: 'Reference', 
+      header: 'Reference #', 
       cell: (row) => (
         <span className="font-mono font-medium text-slate-900 dark:text-white text-xs">
           {row.reference}
@@ -149,37 +172,44 @@ export const ApprovalsCenter = () => {
     },
     { 
       header: 'Status', 
-      cell: (row) => <StatusBadge status={row.status || 'SUBMITTED'} /> 
+      cell: (row) => <StatusBadge status={row.rawStatus || row.status} /> 
     },
     { 
       header: 'Actions', 
-      cell: (row) => (
-        <div className="flex items-center space-x-2">
-          <button 
-            onClick={() => openViewModal(row)}
-            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-primary-600 dark:hover:bg-slate-800 transition-colors" 
-            title="View Details"
-          >
-            <Eye className="h-4 w-4" />
-          </button>
-          <button 
-            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 transition-colors" 
-            title="Approve"
-            onClick={() => handleApprove(row)}
-            disabled={actionLoading}
-          >
-            <CheckCircle className="h-4 w-4" />
-          </button>
-          <button 
-            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-red-600 dark:hover:bg-slate-800 transition-colors" 
-            title="Reject"
-            onClick={() => openRejectModal(row)}
-            disabled={actionLoading}
-          >
-            <XCircle className="h-4 w-4" />
-          </button>
-        </div>
-      ) 
+      cell: (row) => {
+        const isPending = row.status === 'PENDING';
+        return (
+          <div className="flex items-center space-x-1.5">
+            <button 
+              onClick={() => openViewModal(row)}
+              className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-primary-600 dark:hover:bg-slate-800 transition-colors" 
+              title="View Submission Details"
+            >
+              <Eye className="h-4 w-4" />
+            </button>
+            {isPending && (role === 'ADMIN' || role === 'MANAGER') && (
+              <>
+                <button 
+                  className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-emerald-600 dark:hover:bg-slate-800 transition-colors" 
+                  title="Approve Submission"
+                  onClick={() => handleApprove(row)}
+                  disabled={actionLoading}
+                >
+                  <CheckCircle className="h-4 w-4" />
+                </button>
+                <button 
+                  className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-red-600 dark:hover:bg-slate-800 transition-colors" 
+                  title="Reject Submission"
+                  onClick={() => openRejectModal(row)}
+                  disabled={actionLoading}
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              </>
+            )}
+          </div>
+        );
+      } 
     },
   ];
 
@@ -204,40 +234,82 @@ export const ApprovalsCenter = () => {
             Approvals Center
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Review and sign-off pending timesheet logs and vendor invoices in one unified queue.
+            Review pending timesheets and vendor invoices, or inspect approved and rejected history records.
           </p>
         </div>
       </div>
-      
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
-        <div className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 px-4 py-3 flex space-x-2">
-          {[
-            { key: 'All', label: 'All Items' },
-            { key: 'Timesheet', label: 'Timesheets' },
-            { key: 'Invoice', label: 'Invoices' }
-          ].map(tab => (
+
+      {/* Main Status Tabs */}
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+        {[
+          { key: 'PENDING', label: 'Pending Review', count: pendingCount, icon: Clock, color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40' },
+          { key: 'APPROVED', label: 'Approved History', count: approvedCount, icon: CheckCheck, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40' },
+          { key: 'REJECTED', label: 'Rejected History', count: rejectedCount, icon: XCircle, color: 'text-red-600 bg-red-50 dark:bg-red-950/40' },
+          { key: 'ALL', label: 'All Records', count: approvals.length, icon: History, color: 'text-slate-600 bg-slate-100 dark:bg-slate-800' }
+        ].map(tab => {
+          const Icon = tab.icon;
+          return (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                activeTab === tab.key 
-                  ? 'bg-primary-600 text-white shadow-sm' 
-                  : 'text-slate-600 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800'
+              onClick={() => setStatusTab(tab.key)}
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-all ${
+                statusTab === tab.key
+                  ? 'bg-primary-600 text-white shadow-sm ring-1 ring-primary-500'
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200 dark:border-slate-700'
               }`}
             >
-              {tab.label} ({tab.key === 'All' ? approvals.length : approvals.filter(a => a.type.toLowerCase() === tab.key.toLowerCase()).length})
+              <Icon className="h-4 w-4 shrink-0" />
+              <span>{tab.label}</span>
+              <span className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${statusTab === tab.key ? 'bg-primary-700 text-white' : tab.color}`}>
+                {tab.count}
+              </span>
             </button>
-          ))}
+          );
+        })}
+      </div>
+      
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+        <div className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-3.5 flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+          {/* Sub-Filter by Item Type */}
+          <div className="flex space-x-1.5 bg-slate-200/70 dark:bg-slate-800 p-1 rounded-lg">
+            {['ALL', 'Timesheet', 'Invoice'].map(type => (
+              <button
+                key={type}
+                onClick={() => setTypeFilter(type)}
+                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                  typeFilter === type
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs font-semibold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {type === 'ALL' ? 'All Types' : `${type}s`}
+              </button>
+            ))}
+          </div>
+
+          <div className="relative w-full max-w-xs">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search reference, submitter, project..."
+              className="h-8.5 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            />
+          </div>
         </div>
         
         {filteredApprovals.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 mb-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500 mb-3">
               <CheckCircle className="h-6 w-6" />
             </div>
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">All Caught Up!</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+              {statusTab === 'PENDING' ? 'All caught up! No pending approvals.' : 'No records found in this view.'}
+            </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm">
-              There are currently no pending approvals requiring your action.
+              {statusTab === 'PENDING' 
+                ? 'Check the Approved or Rejected History tabs to review previously processed items.' 
+                : 'Approved and rejected items will automatically appear here.'}
             </p>
           </div>
         ) : (
@@ -262,10 +334,10 @@ export const ApprovalsCenter = () => {
                   <h3 className="font-bold text-base text-slate-900 dark:text-white">
                     {selectedApproval.reference}
                   </h3>
-                  <StatusBadge status={selectedApproval.status || 'SUBMITTED'} />
+                  <StatusBadge status={selectedApproval.rawStatus || selectedApproval.status} />
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Type: {selectedApproval.type}
+                  Type: {selectedApproval.type} • Status: {selectedApproval.status}
                 </p>
               </div>
             </div>
@@ -289,27 +361,45 @@ export const ApprovalsCenter = () => {
               </div>
             </div>
 
+            {selectedApproval.rejectionReason && (
+              <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 p-3.5 text-xs text-red-700 dark:text-red-300 space-y-1">
+                <span className="font-bold block">Rejection Feedback & Reason:</span>
+                <p className="leading-relaxed">{selectedApproval.rejectionReason}</p>
+              </div>
+            )}
+
+            {selectedApproval.status === 'APPROVED' && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 p-3 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
+                <span>Verified and approved. Linked to billing run.</span>
+              </div>
+            )}
+
             <div className="flex justify-end space-x-3 pt-3 border-t border-slate-200 dark:border-slate-800">
               <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
                 Close
               </Button>
-              <Button 
-                variant="danger" 
-                onClick={() => {
-                  setIsViewModalOpen(false);
-                  openRejectModal(selectedApproval);
-                }}
-              >
-                Reject
-              </Button>
-              <Button 
-                onClick={() => {
-                  setIsViewModalOpen(false);
-                  handleApprove(selectedApproval);
-                }}
-              >
-                Approve Now
-              </Button>
+              {selectedApproval.status === 'PENDING' && (role === 'ADMIN' || role === 'MANAGER') && (
+                <>
+                  <Button 
+                    variant="danger" 
+                    onClick={() => {
+                      setIsViewModalOpen(false);
+                      openRejectModal(selectedApproval);
+                    }}
+                  >
+                    Reject
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setIsViewModalOpen(false);
+                      handleApprove(selectedApproval);
+                    }}
+                  >
+                    Approve Now
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         )}
