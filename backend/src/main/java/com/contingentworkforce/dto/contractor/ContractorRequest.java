@@ -24,8 +24,7 @@ public class ContractorRequest {
     private String email;
     private String phone;
 
-    @NotNull(message = "Vendor ID is required")
-    private UUID vendorId;
+    private UUID vendorId; // Optional if submitted by VENDOR role (auto-resolved from token)
 
     @NotBlank(message = "Job role is required")
     private String jobRole;

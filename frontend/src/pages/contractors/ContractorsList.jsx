@@ -15,7 +15,15 @@ export const ContractorsList = () => {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const { role } = useAuth();
+  const { role, user } = useAuth();
+
+  // Find vendor company for logged in vendor user
+  const myVendor = role === 'VENDOR'
+    ? (vendors.find(v => 
+        (v.email && user?.email && v.email.toLowerCase() === user.email.toLowerCase()) || 
+        (v.contactPerson && user?.name && v.contactPerson.toLowerCase() === user.name.toLowerCase())
+      ) || vendors[0])
+    : null;
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -64,11 +72,12 @@ export const ContractorsList = () => {
   }, []);
 
   const openAddModal = () => {
+    const defaultVendorId = myVendor?.id || (vendors.length > 0 ? vendors[0].id : '');
     setFormData({
       name: '',
       email: '',
       phone: '',
-      vendorId: vendors.length > 0 ? vendors[0].id : '',
+      vendorId: defaultVendorId,
       jobRole: '',
       hourlyRate: '65',
       startDate: new Date().toISOString().split('T')[0],
@@ -344,22 +353,28 @@ export const ContractorsList = () => {
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Vendor Company <span className="text-red-500">*</span>
               </label>
-              <select
-                value={formData.vendorId}
-                onChange={(e) => setFormData({ ...formData, vendorId: e.target.value })}
-                className="w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white px-3 py-2 border shadow-sm sm:text-sm focus:ring-primary-500 focus:border-primary-500"
-                required
-              >
-                {vendors.length === 0 ? (
-                  <option value="">No vendors available</option>
-                ) : (
-                  vendors.map(v => (
-                    <option key={v.id} value={v.id}>
-                      {v.vendorName || v.name}
-                    </option>
-                  ))
-                )}
-              </select>
+              {role === 'VENDOR' ? (
+                <div className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 px-3 py-2 text-sm font-medium">
+                  {myVendor ? (myVendor.vendorName || myVendor.name) : 'Apex Global Technologies'}
+                </div>
+              ) : (
+                <select
+                  value={formData.vendorId}
+                  onChange={(e) => setFormData({ ...formData, vendorId: e.target.value })}
+                  className="w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white px-3 py-2 border shadow-sm sm:text-sm focus:ring-primary-500 focus:border-primary-500"
+                  required
+                >
+                  {vendors.length === 0 ? (
+                    <option value="">No vendors available</option>
+                  ) : (
+                    vendors.map(v => (
+                      <option key={v.id} value={v.id}>
+                        {v.vendorName || v.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              )}
             </div>
           </div>
 

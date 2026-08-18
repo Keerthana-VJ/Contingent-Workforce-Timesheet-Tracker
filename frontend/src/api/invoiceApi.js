@@ -20,6 +20,11 @@ export const getInvoice = async (id) => {
   return extractData(response);
 };
 
+export const createInvoice = async (data) => {
+  const response = await apiClient.post('/invoices', data);
+  return extractData(response);
+};
+
 export const submitInvoice = async (id) => {
   const response = await apiClient.post(`/invoices/${id}/submit`);
   return extractData(response);
