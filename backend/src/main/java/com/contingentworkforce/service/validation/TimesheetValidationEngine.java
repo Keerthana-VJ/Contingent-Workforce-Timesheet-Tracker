@@ -12,6 +12,8 @@ import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+
 
 @Service
 @RequiredArgsConstructor
@@ -78,8 +80,9 @@ public class TimesheetValidationEngine {
         }
 
         // 4. Overlapping Project Hours
-        Double dailyTotal = timesheetRepository.sumTotalHoursByContractorIdAndWorkDate(ts.getContractor().getId(),
-                ts.getWorkDate());
+        UUID currentId = ts.getId();
+        Double dailyTotal = timesheetRepository.sumTotalHoursByContractorIdAndWorkDateExcluding(ts.getContractor().getId(),
+                ts.getWorkDate(), currentId);
         if (dailyTotal == null)
             dailyTotal = 0.0;
 
@@ -98,7 +101,7 @@ public class TimesheetValidationEngine {
         LocalDate startOfWeek = ts.getWorkDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate endOfWeek = ts.getWorkDate().with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
         Double weeklyTotal = timesheetRepository
-                .sumTotalHoursByContractorIdAndWorkDateBetween(ts.getContractor().getId(), startOfWeek, endOfWeek);
+                .sumTotalHoursByContractorIdAndWorkDateBetweenExcluding(ts.getContractor().getId(), startOfWeek, endOfWeek, currentId);
         if (weeklyTotal == null)
             weeklyTotal = 0.0;
 
@@ -121,11 +124,14 @@ public class TimesheetValidationEngine {
                     "Weekly total hours above standard (" + projectedWeekly + "h).");
         }
 
-        // 6. Future dated
+        // 6. Future dated validation (flags planned schedule as WARNING without blocking)
         if (ts.getWorkDate().isAfter(LocalDate.now())) {
-            blocked = true;
-            addRule(triggeredRules, "FUTURE_DATED", "BLOCKED", "Timesheet cannot be submitted for a future date.");
+            warning = true;
+            riskScore += 5;
+            addRule(triggeredRules, "PLANNED_SCHEDULE", "WARNING", "Timesheet submitted for planned schedule date in project cycle (" + ts.getWorkDate() + ").");
         }
+
+
 
         String status = "PASS";
         if (blocked)

@@ -172,20 +172,34 @@ export const ProjectsList = () => {
     }
   };
 
+  const [statusTab, setStatusTab] = useState('ALL');
+
   const filteredProjects = projects.filter(p => {
     const name = (p.projectName || p.name || '').toLowerCase();
     const client = (p.clientName || p.client || '').toLowerCase();
     const vendorName = (p.vendor?.vendorName || p.vendorName || '').toLowerCase();
     const query = searchTerm.toLowerCase();
-    return name.includes(query) || client.includes(query) || vendorName.includes(query);
+    const matchesSearch = name.includes(query) || client.includes(query) || vendorName.includes(query);
+
+    if (statusTab === 'ACTIVE') return matchesSearch && (p.status === 'ACTIVE' || p.status === 'IN_PROGRESS');
+    if (statusTab === 'COMPLETED') return matchesSearch && p.status === 'COMPLETED';
+    if (statusTab === 'PLANNING') return matchesSearch && p.status === 'PLANNING';
+    return matchesSearch;
   });
+
+  const activeCount = projects.filter(p => p.status === 'ACTIVE' || p.status === 'IN_PROGRESS').length;
+  const completedCount = projects.filter(p => p.status === 'COMPLETED').length;
 
   const columns = [
     { 
       header: 'Project Name', 
       cell: (row) => (
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-semibold text-xs shrink-0">
+          <div className={`flex h-8 w-8 items-center justify-center rounded-lg font-semibold text-xs shrink-0 ${
+            row.status === 'COMPLETED'
+              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+              : 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+          }`}>
             <Briefcase className="h-4 w-4" />
           </div>
           <div>
@@ -265,7 +279,7 @@ export const ProjectsList = () => {
             {role === 'CONTRACTOR' ? 'My Projects' : 'Projects'}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Manage enterprise delivery statements, budget tracking, and vendor staffing.
+            Manage enterprise delivery statements, duration completion, budget tracking, and vendor staffing.
           </p>
         </div>
         {(role === 'ADMIN' || role === 'MANAGER') && (
@@ -274,6 +288,44 @@ export const ProjectsList = () => {
             Create Project
           </Button>
         )}
+      </div>
+
+      {/* Status Filter Tabs (Active vs Completed Section) */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1">
+        <button
+          type="button"
+          onClick={() => setStatusTab('ALL')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+            statusTab === 'ALL'
+              ? 'bg-primary-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+          }`}
+        >
+          All Projects ({projects.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatusTab('ACTIVE')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+            statusTab === 'ACTIVE'
+              ? 'bg-primary-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+          }`}
+        >
+          Active / In Progress ({activeCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatusTab('COMPLETED')}
+          className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+            statusTab === 'COMPLETED'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400 hover:bg-emerald-100'
+          }`}
+        >
+          <CheckCircle className="h-3.5 w-3.5" />
+          Completed Projects ({completedCount})
+        </button>
       </div>
       
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
@@ -293,6 +345,7 @@ export const ProjectsList = () => {
         </div>
         <DataTable columns={columns} data={filteredProjects} keyField="id" />
       </div>
+
 
       {/* Create Project Modal */}
       <Modal

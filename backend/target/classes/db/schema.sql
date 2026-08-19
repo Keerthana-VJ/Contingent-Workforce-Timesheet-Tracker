@@ -45,12 +45,15 @@ CREATE TABLE vendors (
     address TEXT,
     contract_start_date DATE,
     contract_end_date DATE,
+    manager_id UUID REFERENCES users(id) ON DELETE SET NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE', -- ACTIVE, INACTIVE
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_vendors_status ON vendors(status);
+CREATE INDEX idx_vendors_manager ON vendors(manager_id);
+
 
 -- 3. CONTRACTORS
 CREATE TABLE contractors (

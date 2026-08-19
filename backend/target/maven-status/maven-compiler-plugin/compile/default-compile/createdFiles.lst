@@ -36,6 +36,7 @@ com\contingentworkforce\dto\approval\ApprovalResponse.class
 com\contingentworkforce\enums\InvoiceItemType.class
 com\contingentworkforce\dto\vendor\VendorResponse$VendorResponseBuilder.class
 com\contingentworkforce\enums\MilestoneStatus.class
+com\contingentworkforce\dto\auth\UserRequest$UserRequestBuilder.class
 com\contingentworkforce\enums\ApprovalStatus.class
 com\contingentworkforce\dto\validation\ValidationResult.class
 com\contingentworkforce\dto\report\RecentActivityDTO$RecentActivityDTOBuilder.class
@@ -84,6 +85,7 @@ com\contingentworkforce\repository\NotificationRepository.class
 com\contingentworkforce\controller\ProjectController.class
 com\contingentworkforce\service\ProjectService.class
 com\contingentworkforce\service\impl\AuthServiceImpl.class
+com\contingentworkforce\dto\auth\UserRequest.class
 com\contingentworkforce\controller\TimesheetController.class
 com\contingentworkforce\dto\report\VendorPerformanceDTO$VendorPerformanceDTOBuilder.class
 com\contingentworkforce\dto\auth\LoginRequest$LoginRequestBuilder.class
@@ -96,6 +98,7 @@ com\contingentworkforce\security\CustomUserDetails.class
 com\contingentworkforce\entity\ProjectMember$ProjectMemberBuilder.class
 com\contingentworkforce\service\impl\InvoiceServiceImpl.class
 com\contingentworkforce\dto\auth\AuthResponse$AuthResponseBuilder.class
+com\contingentworkforce\service\UserService.class
 com\contingentworkforce\service\impl\VendorServiceImpl.class
 com\contingentworkforce\dto\vendor\VendorRequest$VendorRequestBuilder.class
 com\contingentworkforce\enums\ContractorStatus.class
@@ -138,9 +141,11 @@ com\contingentworkforce\security\JwtAuthenticationFilter.class
 com\contingentworkforce\dto\report\InvoiceStatusDTO$InvoiceStatusDTOBuilder.class
 com\contingentworkforce\dto\project\ProjectRequest.class
 com\contingentworkforce\dto\report\MonthlyBillingDTO$MonthlyBillingDTOBuilder.class
+com\contingentworkforce\service\impl\UserServiceImpl.class
 com\contingentworkforce\service\VendorService.class
 com\contingentworkforce\entity\Vendor$VendorBuilder.class
 com\contingentworkforce\repository\MilestoneRepository.class
+com\contingentworkforce\controller\UserController.class
 com\contingentworkforce\dto\invoice\InvoiceRejectRequest.class
 com\contingentworkforce\enums\VendorStatus.class
 com\contingentworkforce\repository\InvoiceItemRepository.class

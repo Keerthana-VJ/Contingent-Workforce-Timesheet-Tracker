@@ -40,9 +40,26 @@ public interface TimesheetRepository extends JpaRepository<Timesheet, UUID>, Jpa
        Double sumTotalHoursByContractorIdAndWorkDate(@Param("contractorId") UUID contractorId,
                      @Param("workDate") LocalDate workDate);
 
+       @Query("SELECT SUM(t.totalHours) FROM Timesheet t WHERE t.contractor.id = :contractorId AND t.workDate = :workDate AND (:excludeId IS NULL OR t.id != :excludeId) AND t.status != 'REJECTED'")
+       Double sumTotalHoursByContractorIdAndWorkDateExcluding(@Param("contractorId") UUID contractorId,
+                     @Param("workDate") LocalDate workDate,
+                     @Param("excludeId") UUID excludeId);
+
        @Query("SELECT SUM(t.totalHours) FROM Timesheet t WHERE t.contractor.id = :contractorId AND t.workDate BETWEEN :start AND :end AND t.status != 'REJECTED'")
        Double sumTotalHoursByContractorIdAndWorkDateBetween(@Param("contractorId") UUID contractorId,
                      @Param("start") LocalDate start, @Param("end") LocalDate end);
+
+       @Query("SELECT SUM(t.totalHours) FROM Timesheet t WHERE t.contractor.id = :contractorId AND t.workDate BETWEEN :start AND :end AND (:excludeId IS NULL OR t.id != :excludeId) AND t.status != 'REJECTED'")
+       Double sumTotalHoursByContractorIdAndWorkDateBetweenExcluding(@Param("contractorId") UUID contractorId,
+                     @Param("start") LocalDate start, @Param("end") LocalDate end,
+                     @Param("excludeId") UUID excludeId);
+
+       @Query("SELECT COUNT(DISTINCT t.workDate) FROM Timesheet t WHERE t.project.id = :projectId AND t.status != 'REJECTED'")
+       Long countDistinctWorkDaysByProjectId(@Param("projectId") UUID projectId);
+
+       @Query("SELECT MAX(t.workDate) FROM Timesheet t WHERE t.project.id = :projectId AND t.status != 'REJECTED'")
+       LocalDate findMaxWorkDateByProjectId(@Param("projectId") UUID projectId);
+
 
        @Query("SELECT t FROM Timesheet t WHERE " +
                      "(:contractorId IS NULL OR t.contractor.id = :contractorId) AND " +

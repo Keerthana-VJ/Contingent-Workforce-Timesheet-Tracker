@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { getInvoices, approveInvoice, rejectInvoice, markPaidInvoice } from '../../api/invoiceApi';
+import { getInvoices, approveInvoice, rejectInvoice, markPaidInvoice, submitInvoice, createInvoice } from '../../api/invoiceApi';
+import { getProjects } from '../../api/projectApi';
 import { DataTable } from '../../components/common/DataTable';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { FormInput } from '../../components/common/FormInput';
-import { Plus, Eye, CheckCircle, XCircle, DollarSign, AlertTriangle, FileText, Building2, Calendar, ShieldCheck } from 'lucide-react';
+import { Plus, Eye, CheckCircle, XCircle, DollarSign, AlertTriangle, FileText, Building2, Calendar, ShieldCheck, Send, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const InvoicesList = () => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusTab, setStatusTab] = useState('ALL');
   const { role } = useAuth();
 
   // Modals state
@@ -44,6 +46,20 @@ export const InvoicesList = () => {
   const openViewModal = (invoice) => {
     setSelectedInvoice(invoice);
     setIsViewModalOpen(true);
+  };
+
+  const handleDirectSubmit = async (invoice) => {
+    setActionLoading(true);
+    try {
+      await submitInvoice(invoice.id);
+      setFeedbackMsg(`Invoice ${invoice.invoiceNumber || invoice.id} submitted for Manager Authorization!`);
+      setTimeout(() => setFeedbackMsg(''), 4000);
+      fetchInvoicesList();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to submit invoice');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleApprove = async (invoice) => {
@@ -99,10 +115,33 @@ export const InvoicesList = () => {
   const filteredInvoices = invoices.filter(inv => {
     const num = (inv.invoiceNumber || '').toLowerCase();
     const vendor = (inv.vendor?.vendorName || inv.vendorName || '').toLowerCase();
-    const proj = (inv.projectName || '').toLowerCase();
+    const proj = (inv.projectName || inv.project?.projectName || '').toLowerCase();
     const query = searchTerm.toLowerCase();
-    return num.includes(query) || vendor.includes(query) || proj.includes(query);
+    const matchesSearch = num.includes(query) || vendor.includes(query) || proj.includes(query);
+
+    const s = (inv.status || '').toUpperCase();
+    if (statusTab === 'REVIEW') {
+      return matchesSearch && (s === 'UNDER_REVIEW' || s === 'SUBMITTED' || s === 'REVIEW REQUIRED');
+    }
+    if (statusTab === 'APPROVED') {
+      return matchesSearch && (s === 'APPROVED' || s === 'PAID');
+    }
+    if (statusTab === 'DRAFT') {
+      return matchesSearch && (s === 'DRAFT');
+    }
+    return matchesSearch;
   });
+
+  const reviewCount = invoices.filter(i => {
+    const s = (i.status || '').toUpperCase();
+    return s === 'UNDER_REVIEW' || s === 'SUBMITTED' || s === 'REVIEW REQUIRED';
+  }).length;
+  const draftCount = invoices.filter(i => (i.status || '').toUpperCase() === 'DRAFT').length;
+  const approvedCount = invoices.filter(i => {
+    const s = (i.status || '').toUpperCase();
+    return s === 'APPROVED' || s === 'PAID';
+  }).length;
+
 
   const columns = [
     { 
@@ -182,7 +221,17 @@ export const InvoicesList = () => {
             >
               <Eye className="h-4 w-4" />
             </button>
-            {(role === 'MANAGER' || role === 'ADMIN') && isUnderReview && (
+            {(row.status === 'DRAFT' || row.status === 'Draft') && (role === 'VENDOR' || role === 'ADMIN') && (
+              <button 
+                onClick={() => handleDirectSubmit(row)}
+                className="px-2 py-1 text-xs font-semibold rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-950/40 dark:text-primary-300 border border-primary-200 dark:border-primary-800 flex items-center gap-1 transition-colors"
+                title="Submit for Manager Approval"
+              >
+                <Send className="h-3 w-3" />
+                Submit
+              </button>
+            )}
+            {(role === 'MANAGER' || role === 'ADMIN') && (isUnderReview || row.status === 'DRAFT') && (
               <>
                 <button 
                   onClick={() => handleApprove(row)}
@@ -232,9 +281,59 @@ export const InvoicesList = () => {
             Invoices
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Automated billing verification, discrepancy detection, and approval workflow.
+            Automated billing verification, discrepancy detection, and manager authorization workflow.
           </p>
         </div>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1">
+        <button
+          type="button"
+          onClick={() => setStatusTab('ALL')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+            statusTab === 'ALL'
+              ? 'bg-primary-600 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+          }`}
+        >
+          All Invoices ({invoices.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatusTab('REVIEW')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+            statusTab === 'REVIEW'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 hover:bg-amber-100'
+          }`}
+        >
+          <Clock className="h-3.5 w-3.5" />
+          Pending Approval / Under Review ({reviewCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatusTab('DRAFT')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+            statusTab === 'DRAFT'
+              ? 'bg-slate-700 text-white shadow-xs'
+              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+          }`}
+        >
+          Drafts ({draftCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatusTab('APPROVED')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+            statusTab === 'APPROVED'
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400 hover:bg-emerald-100'
+          }`}
+        >
+          <CheckCircle className="h-3.5 w-3.5" />
+          Approved & Paid ({approvedCount})
+        </button>
       </div>
       
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
@@ -254,6 +353,7 @@ export const InvoicesList = () => {
         </div>
         <DataTable columns={columns} data={filteredInvoices} keyField="id" />
       </div>
+
 
       {/* View Invoice Details Modal */}
       <Modal

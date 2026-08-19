@@ -17,9 +17,10 @@ export const setupMockAdapter = (axiosInstance) => {
   ];
 
   const vendors = [
-    { id: 'v1', name: 'Acme Corp', email: 'contact@acme.com', phone: '555-0100', address: '123 Tech Park', activeContractors: 12, activeProjects: 3, status: 'Active', contractStartDate: '2025-01-01', contractEndDate: '2026-12-31' },
-    { id: 'v2', name: 'Global Tech Resourcing', email: 'hr@globaltech.com', phone: '555-0200', address: '456 Business Blvd', activeContractors: 8, activeProjects: 2, status: 'Active', contractStartDate: '2024-06-01', contractEndDate: '2025-06-01' },
+    { id: 'v1', vendorName: 'Acme Corp', name: 'Acme Corp', contactPerson: 'Victor Vendor', email: 'vendor@example.com', phone: '555-0100', address: '123 Tech Park', activeContractors: 1, contractorCount: 1, managerId: 'u2', managerName: 'Michael Manager', managerEmail: 'manager@example.com', status: 'ACTIVE', contractStartDate: '2025-01-01', contractEndDate: '2026-12-31' },
+    { id: 'v2', vendorName: 'Global Tech Resourcing', name: 'Global Tech Resourcing', contactPerson: 'Rachel Green', email: 'nexus@example.com', phone: '555-0200', address: '456 Business Blvd', activeContractors: 1, contractorCount: 1, managerId: 'u8', managerName: 'Jane Smith', managerEmail: 'manager@tracker.com', status: 'ACTIVE', contractStartDate: '2025-03-01', contractEndDate: '2027-03-01' },
   ];
+
 
   const contractors = [
     { id: 'c1', name: 'John Doe', email: 'contractor@tracker.com', phone: '555-0300', vendorId: 'v1', vendorName: 'Acme Corp', projectId: 'p1', projectName: 'Frontend Revamp', jobRole: 'Senior React Developer', hourlyRate: 65, status: 'Active', startDate: '2025-02-01', endDate: '2025-12-31' },
@@ -141,11 +142,16 @@ export const setupMockAdapter = (axiosInstance) => {
         }
       }
 
-      if (d > new Date()) {
+      const nowPlus30 = new Date(Date.now() + 30 * 24 * 3600 * 1000);
+      if (d > nowPlus30) {
         isBlocked = true;
-        allTriggeredRules.push({ rule: 'FUTURE_DATED', severity: 'BLOCKED', message: `Timesheet cannot be submitted for a future date (${day.date}).` });
+        allTriggeredRules.push({ rule: 'FAR_FUTURE_DATED', severity: 'BLOCKED', message: `Timesheet date is too far in future (${day.date}).` });
+      } else if (d > new Date()) {
+        isWarning = true; totalScore += 5;
+        allTriggeredRules.push({ rule: 'PLANNED_SCHEDULE', severity: 'WARNING', message: `Timesheet planned for upcoming schedule day (${day.date}).` });
       }
     });
+
 
     if (grandTotalHours > 60) {
       isReviewRequired = true; totalScore += 30;
@@ -197,6 +203,66 @@ export const setupMockAdapter = (axiosInstance) => {
 
   // ===================== INVOICES =====================
   mock.onGet('/invoices').reply(200, invoices);
+  mock.onPost('/invoices').reply(config => {
+    const data = JSON.parse(config.data || '{}');
+    const newInvoice = {
+      id: `inv-${Math.random().toString(36).substring(2, 9)}`,
+      invoiceNumber: data.invoiceNumber || `INV-${Date.now()}`,
+      vendorId: data.vendorId || 'v1',
+      vendorName: 'Apex Talent Group',
+      projectId: data.projectId || 'p1',
+      projectName: 'Frontend Revamp',
+      billingPeriodStart: data.billingPeriodStart || '2026-08-01',
+      billingPeriodEnd: data.billingPeriodEnd || '2026-08-15',
+      subtotal: Number(data.subtotal || 0),
+      tax: Number(data.tax || 0),
+      totalAmount: Number(data.totalAmount || data.subtotal || 0),
+      differenceAmount: 0,
+      status: 'DRAFT',
+      createdAt: new Date().toISOString()
+    };
+    invoices.unshift(newInvoice);
+    return [201, { data: newInvoice }];
+  });
+  mock.onPost(/\/invoices\/[^\/]+\/submit/).reply(config => {
+    const urlParts = config.url.split('/');
+    const invId = urlParts[2];
+    const inv = invoices.find(i => i.id === invId || `inv-${i.id}` === invId);
+    if (inv) {
+      inv.status = 'UNDER_REVIEW';
+      inv.submittedAt = new Date().toISOString();
+    }
+    return [200, { data: inv || {} }];
+  });
+  mock.onPost(/\/invoices\/[^\/]+\/approve/).reply(config => {
+    const urlParts = config.url.split('/');
+    const invId = urlParts[2];
+    const inv = invoices.find(i => i.id === invId || `inv-${i.id}` === invId);
+    if (inv) {
+      inv.status = 'APPROVED';
+      inv.approvedAt = new Date().toISOString();
+    }
+    return [200, { data: inv || {} }];
+  });
+  mock.onPost(/\/invoices\/[^\/]+\/reject/).reply(config => {
+    const urlParts = config.url.split('/');
+    const invId = urlParts[2];
+    const inv = invoices.find(i => i.id === invId || `inv-${i.id}` === invId);
+    if (inv) {
+      inv.status = 'REJECTED';
+    }
+    return [200, { data: inv || {} }];
+  });
+  mock.onPost(/\/invoices\/[^\/]+\/mark-paid/).reply(config => {
+    const urlParts = config.url.split('/');
+    const invId = urlParts[2];
+    const inv = invoices.find(i => i.id === invId || `inv-${i.id}` === invId);
+    if (inv) {
+      inv.status = 'PAID';
+    }
+    return [200, { data: inv || {} }];
+  });
+
 
   // ===================== REPORTS =====================
   mock.onGet('/reports/dashboard').reply(200, {

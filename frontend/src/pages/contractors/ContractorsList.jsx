@@ -235,21 +235,13 @@ export const ContractorsList = () => {
       cell: (row) => (
         <div className="flex flex-col gap-0.5">
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-            <Building2 className="h-3 w-3" />
+            <Building2 className="h-3.5 w-3.5" />
             {row.vendor?.vendorName || row.vendorName || 'Unassigned'}
           </span>
         </div>
       )
     },
-    { 
-      header: 'Assigned Manager', 
-      cell: (row) => (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-          <UserCheck className="h-3 w-3 text-indigo-500" />
-          {row.vendor?.managerName || 'Unassigned'}
-        </span>
-      )
-    },
+
     { 
       header: 'Job Role', 
       cell: (row) => <span className="font-medium text-xs text-slate-800 dark:text-slate-200">{row.jobRole || row.role || '-'}</span>
@@ -435,14 +427,15 @@ export const ContractorsList = () => {
                   <option value="">-- Select Vendor Agency --</option>
                   {vendors.map(v => (
                     <option key={v.id} value={v.id}>
-                      {v.vendorName || v.name} {v.managerName ? `(Manager: ${v.managerName})` : ''}
+                      {v.vendorName || v.name}
                     </option>
                   ))}
                 </select>
               )}
               <p className="text-[11px] text-slate-500 mt-1">
-                Every contractor must be mapped to an authorized vendor partner.
+                Contractors belong directly to their employing Vendor Agency.
               </p>
+
             </div>
           </div>
 

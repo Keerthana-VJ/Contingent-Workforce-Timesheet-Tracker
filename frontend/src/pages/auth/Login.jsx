@@ -4,14 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/common/Button';
 import { FormInput } from '../../components/common/FormInput';
 import { Logo } from '../../components/common/Logo';
-import { Shield, UserCheck, Briefcase, User, Sparkles } from 'lucide-react';
-
-const DEMO_ACCOUNTS = [
-  { role: 'Admin', email: 'admin@example.com', password: 'Password123!', icon: Shield, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800' },
-  { role: 'Manager', email: 'manager@example.com', password: 'Password123!', icon: UserCheck, color: 'text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800' },
-  { role: 'Vendor', email: 'vendor@example.com', password: 'Password123!', icon: Briefcase, color: 'text-purple-600 bg-purple-50 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800' },
-  { role: 'Contractor', email: 'contractor@example.com', password: 'Password123!', icon: User, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' },
-];
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -20,12 +12,6 @@ export const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-
-  const handleQuickFill = (acc) => {
-    setEmail(acc.email);
-    setPassword(acc.password);
-    setError('');
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,39 +42,6 @@ export const Login = () => {
         </p>
       </div>
 
-      {/* Quick Demo Accounts Selector */}
-      <div className="mb-6 rounded-xl bg-slate-50 p-3.5 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
-        <div className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-          <span className="flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-            Quick Demo Login
-          </span>
-          <span className="text-[11px] font-normal normal-case text-slate-400">Click to fill</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {DEMO_ACCOUNTS.map((acc) => {
-            const Icon = acc.icon;
-            const isSelected = email === acc.email;
-            return (
-              <button
-                key={acc.role}
-                type="button"
-                onClick={() => handleQuickFill(acc)}
-                className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-xs transition-all ${acc.color} ${
-                  isSelected ? 'ring-2 ring-primary-500 font-semibold shadow-sm' : 'opacity-85 hover:opacity-100 hover:shadow-sm'
-                }`}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <div className="truncate">
-                  <div className="font-medium leading-tight">{acc.role}</div>
-                  <div className="text-[10px] opacity-75 truncate">{acc.email.split('@')[0]}</div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       <form className="space-y-5" onSubmit={handleSubmit}>
         {error && (
           <div className="rounded-lg bg-red-50 p-3.5 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400 animate-fadeIn">
@@ -103,7 +56,7 @@ export const Login = () => {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="e.g. admin@example.com"
+            placeholder="name@company.com"
             required
           />
 
@@ -137,3 +90,4 @@ export const Login = () => {
     </div>
   );
 };
+

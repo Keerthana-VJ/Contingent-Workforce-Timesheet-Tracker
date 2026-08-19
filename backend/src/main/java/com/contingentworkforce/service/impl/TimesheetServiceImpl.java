@@ -8,7 +8,9 @@ import com.contingentworkforce.entity.*;
 import com.contingentworkforce.enums.ApprovalStatus;
 import com.contingentworkforce.enums.EntityType;
 import com.contingentworkforce.enums.NotificationType;
+import com.contingentworkforce.enums.ProjectStatus;
 import com.contingentworkforce.enums.TimesheetStatus;
+
 import com.contingentworkforce.exception.AccessDeniedException;
 import com.contingentworkforce.exception.BadRequestException;
 import com.contingentworkforce.exception.DuplicateResourceException;
@@ -203,8 +205,13 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         ValidationResult validationResult = validationEngine.validate(timesheet);
         if ("BLOCKED".equals(validationResult.getStatus())) {
-            throw new BadRequestException("Timesheet validation blocked submission due to critical rule violations.");
+            String reasons = validationResult.getRulesTriggered() != null ? validationResult.getRulesTriggered().stream()
+                    .filter(r -> "BLOCKED".equalsIgnoreCase(r.getSeverity()))
+                    .map(ValidationResult.TriggeredRule::getMessage)
+                    .collect(java.util.stream.Collectors.joining("; ")) : "";
+            throw new BadRequestException("Timesheet validation blocked submission: " + (reasons.isEmpty() ? "Critical rule violation." : reasons));
         }
+
 
         timesheet.setRiskScore(validationResult.getRiskScore());
         timesheet.setRiskLevel(validationResult.getRiskLevel());
@@ -238,6 +245,9 @@ public class TimesheetServiceImpl implements TimesheetService {
                         NotificationType.TIMESHEET);
             });
         }
+
+        // Check and transition project to COMPLETED if all timesheet days in project duration are completed
+        checkAndCompleteProjectIfDurationFinished(timesheet.getProject());
 
         return mapToTimesheetResponse(updated);
     }
@@ -273,6 +283,9 @@ public class TimesheetServiceImpl implements TimesheetService {
         approvalService.recordApproval(EntityType.TIMESHEET, timesheet.getId(), timesheet.getContractor().getUser(),
                 approver, ApprovalStatus.APPROVED, "Timesheet approved by " + approver.getName());
 
+        // Check and transition project to COMPLETED if all timesheet days in project duration are completed
+        checkAndCompleteProjectIfDurationFinished(timesheet.getProject());
+
         // Notify Contractor
         notificationService.createNotification(
                 timesheet.getContractor().getUser(),
@@ -285,6 +298,7 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         return mapToTimesheetResponse(updated);
     }
+
 
     @Override
     @Transactional
@@ -421,4 +435,48 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .updatedAt(timesheet.getUpdatedAt())
                 .build();
     }
+
+    private void checkAndCompleteProjectIfDurationFinished(Project project) {
+        if (project == null || project.getStatus() == ProjectStatus.COMPLETED) {
+            return;
+        }
+
+        boolean isCompleted = false;
+
+        // Check 1: Max work date reached or passed project end date
+        if (project.getEndDate() != null) {
+            LocalDate maxWorkDate = timesheetRepository.findMaxWorkDateByProjectId(project.getId());
+            if (maxWorkDate != null && (maxWorkDate.isEqual(project.getEndDate()) || maxWorkDate.isAfter(project.getEndDate()))) {
+                isCompleted = true;
+            } else if (project.getStartDate() != null) {
+                // Check if total distinct days logged matches duration
+                long totalDays = java.time.temporal.ChronoUnit.DAYS.between(project.getStartDate(), project.getEndDate()) + 1;
+                Long distinctDaysLogged = timesheetRepository.countDistinctWorkDaysByProjectId(project.getId());
+                if (distinctDaysLogged != null && distinctDaysLogged >= totalDays) {
+                    isCompleted = true;
+                }
+            }
+        }
+
+        // Check 2: All milestones for the project are completed
+        java.util.List<Milestone> projectMilestones = milestoneRepository.findByProjectId(project.getId());
+        if (!projectMilestones.isEmpty() && projectMilestones.stream().allMatch(m -> m.getStatus() == com.contingentworkforce.enums.MilestoneStatus.COMPLETED)) {
+            isCompleted = true;
+        }
+
+        if (isCompleted) {
+            project.setStatus(ProjectStatus.COMPLETED);
+            projectRepository.save(project);
+
+            if (project.getManager() != null) {
+                notificationService.createNotification(
+                        project.getManager(),
+                        "Project Completed",
+                        String.format("All timesheet days for project '%s' have been completed. Project has moved to COMPLETED.", project.getProjectName()),
+                        NotificationType.SYSTEM);
+            }
+
+        }
+    }
 }
+

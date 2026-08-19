@@ -234,6 +234,16 @@ public class MilestoneServiceImpl implements MilestoneService {
         milestone.setCompletionPercentage(100);
         Milestone updated = milestoneRepository.save(milestone);
 
+        // Check if all milestones on project are now completed
+        Project project = milestone.getProject();
+        if (project != null && project.getStatus() != com.contingentworkforce.enums.ProjectStatus.COMPLETED) {
+            List<Milestone> allMilestones = milestoneRepository.findByProjectId(project.getId());
+            if (!allMilestones.isEmpty() && allMilestones.stream().allMatch(m -> m.getStatus() == MilestoneStatus.COMPLETED)) {
+                project.setStatus(com.contingentworkforce.enums.ProjectStatus.COMPLETED);
+                projectRepository.save(project);
+            }
+        }
+
         // Notify Project Manager that contractor accomplished the milestone
         if (milestone.getProject().getManager() != null) {
             notificationService.createNotification(
@@ -246,6 +256,7 @@ public class MilestoneServiceImpl implements MilestoneService {
         }
 
         return mapToMilestoneResponse(updated);
+
     }
 
     @Override

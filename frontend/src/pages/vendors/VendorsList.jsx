@@ -215,14 +215,20 @@ export const VendorsList = () => {
     { 
       header: 'Assigned Manager', 
       cell: (row) => (
-        <div className="flex items-center gap-1.5 text-xs">
-          <span className="inline-flex items-center gap-1 font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 shadow-xs">
+        <div className="flex flex-col gap-0.5">
+          <span className="inline-flex items-center gap-1 font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 shadow-xs text-xs">
             <UserCheck className="h-3.5 w-3.5 text-indigo-500" />
             {row.managerName || 'Unassigned'}
           </span>
+          {row.managerEmail && (
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 pl-1">
+              {row.managerEmail}
+            </span>
+          )}
         </div>
       )
     },
+
     { 
       header: 'Contractors Mapped', 
       cell: (row) => (
@@ -380,28 +386,54 @@ export const VendorsList = () => {
             required
           />
 
-          {/* Assigned Manager Selection */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Assigned Account / Project Manager *
-            </label>
+          {/* Assigned Manager Selection & Details */}
+          <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-3.5 dark:border-indigo-900/50 dark:bg-indigo-950/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-semibold text-indigo-950 dark:text-indigo-200">
+                Assigned Account / Project Manager <span className="text-red-500">*</span>
+              </label>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/60 px-2 py-0.5 rounded">
+                Supervisory Mapping
+              </span>
+            </div>
             <select
               value={formData.managerId}
               onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
               className="w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white px-3 py-2 border shadow-sm sm:text-sm focus:ring-primary-500 focus:border-primary-500 font-medium"
               required
             >
-              <option value="">-- Select Manager --</option>
+              <option value="">-- Select Manager to Supervise this Vendor --</option>
               {managers.map(m => (
                 <option key={m.id} value={m.id}>
                   {m.name} ({m.email})
                 </option>
               ))}
             </select>
-            <p className="text-[11px] text-slate-500 mt-1">
-              Every vendor is mapped to an account manager who verifies its contractor submissions.
+            {(() => {
+              const selectedMgr = managers.find(m => String(m.id) === String(formData.managerId));
+              if (!selectedMgr) return null;
+              return (
+                <div className="flex items-center justify-between text-xs bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-indigo-100 dark:border-slate-800 mt-1 shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-xs">
+                      {selectedMgr.name?.charAt(0) || 'M'}
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-900 dark:text-white block">{selectedMgr.name}</span>
+                      <span className="text-slate-500 dark:text-slate-400">{selectedMgr.email}</span>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                    {selectedMgr.phone || 'Enterprise Manager'}
+                  </span>
+                </div>
+              );
+            })()}
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              This Manager oversees this Vendor and approves their project deliverables and timesheets.
             </p>
           </div>
+
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormInput
@@ -504,24 +536,50 @@ export const VendorsList = () => {
             required
           />
 
-          {/* Assigned Manager Selection */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Assigned Account / Project Manager
-            </label>
+          {/* Assigned Manager Selection & Details */}
+          <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-3.5 dark:border-indigo-900/50 dark:bg-indigo-950/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-semibold text-indigo-950 dark:text-indigo-200">
+                Assigned Account / Project Manager
+              </label>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/60 px-2 py-0.5 rounded">
+                Supervisory Mapping
+              </span>
+            </div>
             <select
               value={formData.managerId}
               onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
               className="w-full rounded-md border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white px-3 py-2 border shadow-sm sm:text-sm focus:ring-primary-500 focus:border-primary-500 font-medium"
             >
-              <option value="">-- Select Manager --</option>
+              <option value="">-- Select Manager to Supervise this Vendor --</option>
               {managers.map(m => (
                 <option key={m.id} value={m.id}>
                   {m.name} ({m.email})
                 </option>
               ))}
             </select>
+            {(() => {
+              const selectedMgr = managers.find(m => String(m.id) === String(formData.managerId));
+              if (!selectedMgr) return null;
+              return (
+                <div className="flex items-center justify-between text-xs bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-indigo-100 dark:border-slate-800 mt-1 shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-xs">
+                      {selectedMgr.name?.charAt(0) || 'M'}
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-900 dark:text-white block">{selectedMgr.name}</span>
+                      <span className="text-slate-500 dark:text-slate-400">{selectedMgr.email}</span>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                    {selectedMgr.phone || 'Enterprise Manager'}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
+
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormInput

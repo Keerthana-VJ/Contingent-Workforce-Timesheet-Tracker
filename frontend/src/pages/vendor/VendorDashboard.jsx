@@ -7,8 +7,7 @@ import { FormInput } from '../../components/common/FormInput';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { getContractors } from '../../api/contractorApi';
 import { getProjects, getMyProjects } from '../../api/projectApi';
-import { getTimesheets } from '../../api/timesheetApi';
-import { getInvoices, createInvoice } from '../../api/invoiceApi';
+import { getInvoices, createInvoice, submitInvoice } from '../../api/invoiceApi';
 import { getMilestones } from '../../api/milestoneApi';
 import { approveApprovalItem } from '../../api/approvalApi';
 import { useAuth } from '../../context/AuthContext';
@@ -23,8 +22,10 @@ import {
   CheckCircle, 
   AlertCircle, 
   RefreshCw,
-  ArrowRight
+  ArrowRight,
+  Send
 } from 'lucide-react';
+
 import { useNavigate } from 'react-router-dom';
 
 export const VendorDashboard = () => {
@@ -151,6 +152,17 @@ export const VendorDashboard = () => {
     });
   };
 
+  const handleDirectSubmitInvoice = async (invoiceId, invoiceNumber) => {
+    try {
+      await submitInvoice(invoiceId);
+      setFeedbackMsg(`Invoice ${invoiceNumber || ''} submitted for Enterprise Manager authorization!`);
+      setTimeout(() => setFeedbackMsg(''), 4000);
+      fetchVendorData();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to submit invoice for approval');
+    }
+  };
+
   const handleCreateInvoice = async (e) => {
     e.preventDefault();
     if (!invoiceForm.invoiceNumber.trim() || !invoiceForm.projectId || !invoiceForm.subtotal) {
@@ -160,13 +172,22 @@ export const VendorDashboard = () => {
     setCreatingInvoice(true);
     setInvoiceError('');
     try {
-      await createInvoice({
+      const created = await createInvoice({
         ...invoiceForm,
         subtotal: Number(invoiceForm.subtotal),
         tax: Number(invoiceForm.tax || 0),
         totalAmount: Number(invoiceForm.totalAmount)
       });
-      setFeedbackMsg(`Invoice ${invoiceForm.invoiceNumber} created successfully in DRAFT status!`);
+      
+      const createdId = created?.id || created?.data?.id || (created && typeof created === 'object' ? created.id : null);
+      if (createdId) {
+        try {
+          await submitInvoice(createdId);
+        } catch (subErr) {
+          console.warn("Auto-submit warning", subErr);
+        }
+      }
+      setFeedbackMsg(`Invoice ${invoiceForm.invoiceNumber} created and submitted for Manager Authorization!`);
       setTimeout(() => setFeedbackMsg(''), 4000);
       setIsInvoiceModalOpen(false);
       fetchVendorData();
@@ -176,6 +197,7 @@ export const VendorDashboard = () => {
       setCreatingInvoice(false);
     }
   };
+
 
   if (loading) return <LoadingSpinner size="lg" className="mt-20" />;
 
@@ -339,12 +361,23 @@ export const VendorDashboard = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <span className="font-bold text-sm text-slate-900 dark:text-white">
                     ${(Number(inv.totalAmount) || 0).toLocaleString()}
                   </span>
                   <StatusBadge status={inv.status || 'DRAFT'} />
+                  {(inv.status === 'DRAFT' || inv.status === 'Draft') && (
+                    <button
+                      onClick={() => handleDirectSubmitInvoice(inv.id, inv.invoiceNumber)}
+                      className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-950/40 dark:text-primary-300 border border-primary-200 dark:border-primary-800 flex items-center gap-1 transition-colors"
+                      title="Submit for Manager Approval"
+                    >
+                      <Send className="h-3 w-3" />
+                      Submit
+                    </button>
+                  )}
                 </div>
+
               </div>
             ))}
           </div>

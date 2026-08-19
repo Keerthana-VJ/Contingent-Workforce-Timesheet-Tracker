@@ -86,6 +86,13 @@ export const approveApprovalItem = async (item) => {
     const res = await apiClient.post(`/timesheets/${item.originalId}/approve`);
     return extractData(res);
   } else if (type === 'invoice') {
+    if (item.rawStatus === 'DRAFT' || item.rawStatus === 'Draft') {
+      try {
+        await apiClient.post(`/invoices/${item.originalId}/submit`);
+      } catch (e) {
+        // Continue to approve
+      }
+    }
     const res = await apiClient.post(`/invoices/${item.originalId}/approve`);
     return extractData(res);
   } else {
@@ -93,6 +100,7 @@ export const approveApprovalItem = async (item) => {
     return extractData(res);
   }
 };
+
 
 export const rejectApprovalItem = async (item, reason) => {
   const type = (item.type || '').toLowerCase();
